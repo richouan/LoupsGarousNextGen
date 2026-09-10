@@ -61,14 +61,14 @@ export function App() {
           if (res.data.user.id === '999999999999999999') {
             console.warn('Old demo token detected, clearing session...');
             localStorage.removeItem('lg_auth_token');
-            window.location.href = 'http://localhost:3001/api/auth/discord';
+            window.location.href = '/api/auth/discord';
             return;
           }
 
           finalizeUserSession(res.data.user, res.data.guilds);
         } catch {
           localStorage.removeItem('lg_auth_token');
-          window.location.href = 'http://localhost:3001/api/auth/discord';
+          window.location.href = '/api/auth/discord';
         } finally {
           setAuthLoading(false);
         }
@@ -194,7 +194,7 @@ export function App() {
         selectedGuild={selectedGuild}
         onSelectGuild={handleSelectGuild}
         onLogout={handleLogout}
-        onLogin={() => window.location.href = 'http://localhost:3001/api/auth/discord'}
+        onLogin={() => window.location.href = '/api/auth/discord'}
         authLoading={authLoading}
         onBrandClick={handleBrandClick}
       />
@@ -253,7 +253,7 @@ export function App() {
             <p style={{ color: 'var(--text-light-muted)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
               Sign in with your Discord account to manage your server game settings or global role cards.
             </p>
-            <button className="btn btn-gold" onClick={() => window.location.href = 'http://localhost:3001/api/auth/discord'}>
+            <button className="btn btn-gold" onClick={() => window.location.href = '/api/auth/discord'}>
               Connect with Discord
             </button>
           </div>
