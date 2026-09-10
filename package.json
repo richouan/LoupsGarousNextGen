@@ -1,0 +1,25 @@
+{
+  "name": "loup-garou-bot-suite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Professional Loup-Garou Discord Bot & Narrator Management Dashboard",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "npm --workspace=packages/server run dev",
+    "dev:bot": "npm --workspace=packages/bot run dev",
+    "dev:dashboard": "npm --workspace=packages/dashboard run dev",
+    "dev": "npm --workspace=packages/server run dev",
+    "build": "npm run build --workspaces --if-present",
+    "heroku-postbuild": "npm run build --workspaces --if-present && npm --workspace=packages/server run prisma:push"
+  },
+  "keywords": [
+    "discord-bot",
+    "loup-garou",
+    "werewolf",
+    "dashboard"
+  ],
+  "author": "Loup-Garou Engine Team",
+  "license": "MIT"
+}
