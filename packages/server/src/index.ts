@@ -19,7 +19,9 @@ const PORT = process.env.PORT || 3001;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  'https://loupsgarous-nextgen-1b6fe20f22bd.herokuapp.com'
+  'https://loupsgarous-nextgen-1b6fe20f22bd.herokuapp.com',
+  'https://loupgarou.online',
+  'https://www.loupgarou.online'
 ];
 app.use(cors({
   origin: (origin, callback) => {
