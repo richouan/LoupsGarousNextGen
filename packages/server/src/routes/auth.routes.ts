@@ -83,10 +83,14 @@ router.post('/callback', async (req: Request, res: Response) => {
       isSuperAdmin: getSuperAdminIds().includes(rawUser.id)
     };
 
-    // Filter guilds: STRICTLY only servers where user is Owner (g.owner === true)
-    const filteredGuilds = rawGuilds.filter((g: any) => g.owner === true);
+    // Filter guilds: owner OR has Administrator permission (bit 0x8)
+    const ADMIN_BIT = BigInt(0x8);
+    const filteredGuilds = rawGuilds.filter((g: any) => {
+      if (g.owner === true) return true;
+      try { return (BigInt(g.permissions || 0) & ADMIN_BIT) === ADMIN_BIT; } catch { return false; }
+    });
 
-    console.log(`[OAuth] Total servers from Discord: ${rawGuilds.length} | Owner servers only: ${filteredGuilds.length}`);
+    console.log(`[OAuth] Total servers: ${rawGuilds.length} | Owner+Admin servers: ${filteredGuilds.length}`);
 
     // Check which guilds have the bot installed (from DB Guild records)
     const existingDbGuilds = await prisma.guild.findMany({
@@ -141,10 +145,14 @@ router.get('/me', async (req: Request, res: Response) => {
     });
     const botGuildIds = new Set(existingDbGuilds.map((g: any) => g.id));
 
-    // Filter guilds strictly: only owner === true
+    // Filter guilds: owner OR has Administrator permission
+    const ADMIN_BIT2 = BigInt(0x8);
     const rawGuilds = decoded.guilds || [];
     const updatedGuilds = rawGuilds
-      .filter((g: any) => g.owner === true)
+      .filter((g: any) => {
+        if (g.owner === true) return true;
+        try { return (BigInt(g.permissions || 0) & ADMIN_BIT2) === ADMIN_BIT2; } catch { return false; }
+      })
       .map((g: any) => {
         const hasBot = botGuildIds.has(g.id);
         const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${getClientId()}&permissions=8&scope=bot&guild_id=${g.id}&disable_guild_select=true`;
