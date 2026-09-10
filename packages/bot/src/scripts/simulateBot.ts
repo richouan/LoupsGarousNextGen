@@ -14,6 +14,9 @@ const sampleCards: MatchableCard[] = [
     shortDescription: 'Tire sur quelqu\'un en mourant.',
     imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136',
     replyMode: 'BOTH',
+    isUnique: true,
+    abilityType: 'NIGHT',
+    difficulty: 1,
     isEnabled: true
   },
   {
@@ -23,6 +26,9 @@ const sampleCards: MatchableCard[] = [
     camp: 'VILLAGEOIS',
     description: 'Possède une potion de vie et une potion de mort.',
     replyMode: 'BOTH',
+    isUnique: true,
+    abilityType: 'NIGHT',
+    difficulty: 2,
     isEnabled: true
   },
   {
@@ -32,6 +38,9 @@ const sampleCards: MatchableCard[] = [
     camp: 'LOUPS',
     description: 'Dévore un villageois chaque nuit.',
     replyMode: 'BOTH',
+    isUnique: false,
+    abilityType: 'NIGHT',
+    difficulty: 1,
     isEnabled: true
   }
 ];
