@@ -198,7 +198,7 @@ router.get('/:guildId/cards', authenticate, async (req: Request, res: Response) 
     orderBy: { name: 'asc' }
   });
 
-  const parsed = cards.map((c) => ({
+  const parsed = cards.map((c: any) => ({
     ...c,
     isCustom: c.guildId !== null
   }));

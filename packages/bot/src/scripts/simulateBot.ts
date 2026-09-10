@@ -13,7 +13,6 @@ const sampleCards: MatchableCard[] = [
     description: 'Le Chasseur élimine un joueur en mourant.',
     shortDescription: 'Tire sur quelqu\'un en mourant.',
     imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136',
-    triggers: ['chasseur', 'hunter', 'chass'],
     replyMode: 'BOTH',
     isEnabled: true
   },
@@ -23,7 +22,6 @@ const sampleCards: MatchableCard[] = [
     slug: 'sorciere',
     camp: 'VILLAGEOIS',
     description: 'Possède une potion de vie et une potion de mort.',
-    triggers: ['sorciere', 'sorcière', 'witch'],
     replyMode: 'BOTH',
     isEnabled: true
   },
@@ -33,7 +31,6 @@ const sampleCards: MatchableCard[] = [
     slug: 'loup-garou',
     camp: 'LOUPS',
     description: 'Dévore un villageois chaque nuit.',
-    triggers: ['loup', 'loups', 'loup-garou', 'lg'],
     replyMode: 'BOTH',
     isEnabled: true
   }
@@ -76,7 +73,7 @@ function runTests() {
   assert(match5?.slug === 'sorciere', 'Matches without accents: "sorciere"');
 
   const match6 = cardMatcherService.findMatch('hunter', sampleCards);
-  assert(match6?.slug === 'chasseur', 'Matches configured alias: "hunter"');
+  assert(match6 === null, 'No triggers anymore');
 
   // CRITICAL: Ensure full conversation messages containing the word are NOT auto-replied!
   const sentenceMatch = cardMatcherService.findMatch('Je pense que le chasseur a bien joué', sampleCards);
@@ -136,9 +133,9 @@ function runTests() {
   // --- 4. Embed & Reveal Button Builder Tests ---
   console.log('\n--- Test 4: Embed & Secret Reveal Button Construction ---');
 
-  const embed = buildCardEmbed(sampleCards[0], false);
-  assert(embed.data.title === '🃏 Carte : Chasseur', 'Embed title formatted correctly');
-  assert(embed.data.color === 0x3b82f6, 'Embed color matches Villageois blue');
+  const embedOutput = buildCardEmbed(sampleCards[0], false);
+  assert(embedOutput.embed.data.title === '🃏 Carte : Chasseur', 'Embed title formatted correctly');
+  assert(embedOutput.embed.data.color === 0x3b82f6, 'Embed color matches Villageois blue');
 
   const row = buildSecretRevealRow('card-1', 'Chasseur');
   assert(row.components.length === 1, 'Secret button row created');

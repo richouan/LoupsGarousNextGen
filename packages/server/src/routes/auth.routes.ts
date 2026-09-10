@@ -139,7 +139,7 @@ router.get('/me', async (req: Request, res: Response) => {
     const existingDbGuilds = await prisma.guild.findMany({
       select: { id: true }
     });
-    const botGuildIds = new Set(existingDbGuilds.map((g) => g.id));
+    const botGuildIds = new Set(existingDbGuilds.map((g: any) => g.id));
 
     // Filter guilds strictly: only owner === true
     const rawGuilds = decoded.guilds || [];
