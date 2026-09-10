@@ -1,8 +1,8 @@
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Configure dotenv immediately before importing route modules that read process.env at evaluation time
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+// Load .env file only in local development (Heroku uses Config Vars natively)
+try { dotenv.config({ path: path.resolve(__dirname, '../../../.env') }); } catch {}
 
 import express from 'express';
 import cors from 'cors';
@@ -16,8 +16,20 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middlewares
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://loupsgarous-nextgen-1b6fe20f22bd.herokuapp.com'
+];
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: (origin, callback) => {
+    // Allow same-origin requests (no origin header) and whitelisted origins
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // permissive in production for now
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
