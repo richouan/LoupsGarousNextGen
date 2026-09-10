@@ -32,6 +32,10 @@ app.use('/api/cards', cardsRoutes);
 app.use('/api/bot', botRoutes);
 app.use('/api/upload', uploadRoutes);
 
+// Serve the dashboard statically in production
+const dashboardPath = path.resolve(__dirname, '../../../packages/dashboard/dist');
+app.use(express.static(dashboardPath));
+
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -39,6 +43,11 @@ app.get('/api/health', (_req, res) => {
     service: 'Loup-Garou Engine Backend API',
     timestamp: new Date().toISOString()
   });
+});
+
+// Fallback for React Router (must be after API routes and static files)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(dashboardPath, 'index.html'));
 });
 
 app.listen(PORT, () => {

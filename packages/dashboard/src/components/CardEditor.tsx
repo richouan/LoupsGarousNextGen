@@ -142,7 +142,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
     formData.append('image', file);
 
     try {
-      const res = await fetch('http://localhost:3001/api/upload', {
+      const res = await fetch('/api/upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('lg_auth_token')}`
