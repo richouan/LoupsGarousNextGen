@@ -23,7 +23,7 @@ app.use(cors({
 app.use(express.json());
 
 // Serve uploads directory statically so frontend and Discord can access images
-app.use('/uploads', express.static(path.resolve(__dirname, '../../../uploads')));
+app.use('/uploads', express.static(path.resolve(__dirname, '../../../../uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -33,7 +33,7 @@ app.use('/api/bot', botRoutes);
 app.use('/api/upload', uploadRoutes);
 
 // Serve the dashboard statically in production
-const dashboardPath = path.resolve(__dirname, '../../../packages/dashboard/dist');
+const dashboardPath = path.resolve(__dirname, '../../../../packages/dashboard/dist');
 app.use(express.static(dashboardPath));
 
 // Health check
