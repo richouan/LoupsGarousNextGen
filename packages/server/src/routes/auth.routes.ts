@@ -2,7 +2,14 @@ import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import prisma from '../db/prisma';
-import { isGuildAllowed, getAllowedGuildsDetails, getContactUser } from '../utils/allowedGuilds';
+import {
+  isGuildAllowed,
+  getAllowedGuildIds,
+  getAllowedGuildsDetails,
+  getContactUser,
+  isDevUser,
+  isSuperAdminUser
+} from '../utils/allowedGuilds';
 
 const router = Router();
 const getClientId = () => process.env.DISCORD_CLIENT_ID || '';
@@ -57,8 +64,8 @@ router.post('/callback', async (req: Request, res: Response) => {
       headers: { Authorization: `Bearer ${access_token}` }
     });
 
-    const superAdminList = (process.env.SUPER_ADMIN_IDS || '').split(',').map((id) => id.trim());
-    const isSuperAdmin = superAdminList.includes(userResponse.data.id);
+    const isDev = isDevUser(userResponse.data.id);
+    const isSuperAdmin = isDev || (await isSuperAdminUser(userResponse.data.id));
 
     const user = {
       id: userResponse.data.id,
@@ -66,6 +73,7 @@ router.post('/callback', async (req: Request, res: Response) => {
       avatar: userResponse.data.avatar
         ? `https://cdn.discordapp.com/avatars/${userResponse.data.id}/${userResponse.data.avatar}.png`
         : null,
+      isDev,
       isSuperAdmin
     };
 
@@ -88,6 +96,7 @@ router.post('/callback', async (req: Request, res: Response) => {
       select: { id: true }
     });
     const botGuildIds = new Set(existingDbGuilds.map((g: any) => g.id));
+    const allowedIds = new Set(await getAllowedGuildIds());
 
     const guilds = filteredGuilds.map((g: any) => {
       const iconUrl = g.icon
@@ -95,7 +104,7 @@ router.post('/callback', async (req: Request, res: Response) => {
         : null;
 
       const hasBot = botGuildIds.has(g.id);
-      const isAllowed = isGuildAllowed(g.id);
+      const isAllowed = allowedIds.has(g.id);
 
       return {
         id: g.id,
@@ -140,6 +149,7 @@ router.get('/me', async (req: Request, res: Response) => {
       select: { id: true }
     });
     const botGuildIds = new Set(existingDbGuilds.map((g: any) => g.id));
+    const allowedIds = new Set(await getAllowedGuildIds());
 
     // Filter guilds: owner OR has Administrator permission
     const ADMIN_BIT2 = BigInt(0x8);
@@ -151,7 +161,7 @@ router.get('/me', async (req: Request, res: Response) => {
       })
       .map((g: any) => {
         const hasBot = botGuildIds.has(g.id);
-        const isAllowed = isGuildAllowed(g.id);
+        const isAllowed = allowedIds.has(g.id);
         const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${getClientId()}&permissions=8&scope=bot&guild_id=${g.id}&disable_guild_select=true`;
         return {
           ...g,
@@ -164,7 +174,15 @@ router.get('/me', async (req: Request, res: Response) => {
     const allowedGuilds = await getAllowedGuildsDetails();
     const contactUser = getContactUser();
 
-    return res.json({ user: decoded.user, guilds: updatedGuilds, allowedGuilds, contactUser });
+    const isDev = isDevUser(decoded.user.id);
+    const isSuperAdmin = isDev || (await isSuperAdminUser(decoded.user.id));
+    const updatedUser = {
+      ...decoded.user,
+      isDev,
+      isSuperAdmin
+    };
+
+    return res.json({ user: updatedUser, guilds: updatedGuilds, allowedGuilds, contactUser });
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }

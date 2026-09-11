@@ -124,7 +124,7 @@ router.get('/:guildId/settings', authenticate, async (req: Request, res: Respons
 router.put('/:guildId/settings', authenticate, async (req: Request, res: Response) => {
   const { guildId } = req.params;
 
-  if (!isGuildAllowed(guildId)) {
+  if (!(await isGuildAllowed(guildId))) {
     return res.status(403).json({
       error: 'GUILD_NOT_ALLOWED',
       message: 'Ce serveur n’est pas autorisé. Le bot est en développement fermé. Contactez ezreal.',

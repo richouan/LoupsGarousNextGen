@@ -1,6 +1,15 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
-import { getAllowedGuildIds, getAllowedGuildsDetails, getContactUser } from '../utils/allowedGuilds';
+import {
+  getAllowedGuildIds,
+  getAllowedGuildsDetails,
+  getContactUser,
+  fetchDiscordGuildInfo,
+  fetchDiscordUserInfo,
+  getDevUserIds
+} from '../utils/allowedGuilds';
+import { authenticate } from './guilds.routes';
+import { requireDev } from '../middleware/rbac';
 
 const router = Router();
 
@@ -9,7 +18,7 @@ const router = Router();
  */
 router.get('/allowed-guilds', async (_req: Request, res: Response) => {
   try {
-    const allowedGuildIds = getAllowedGuildIds();
+    const allowedGuildIds = await getAllowedGuildIds();
     const allowedGuilds = await getAllowedGuildsDetails();
     const contactUser = getContactUser();
 
@@ -22,6 +31,125 @@ router.get('/allowed-guilds', async (_req: Request, res: Response) => {
   } catch (err: any) {
     console.error('[bot.routes] Failed to get allowed guilds:', err);
     return res.status(500).json({ error: 'Failed to retrieve allowed guilds' });
+  }
+});
+
+/**
+ * Dev Only: Retrieve all allowed servers and super admins for the Bot Settings tab
+ */
+router.get('/admin-settings', authenticate, requireDev, async (_req: Request, res: Response) => {
+  try {
+    const allowedGuilds = await getAllowedGuildsDetails();
+    const superAdmins = await prisma.superAdmin.findMany({ orderBy: { createdAt: 'asc' } });
+    const devIds = getDevUserIds();
+
+    return res.json({
+      allowedGuilds,
+      superAdmins,
+      devIds
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Dev Only: Add an allowed server by Discord Guild ID
+ */
+router.post('/allowed-guilds', authenticate, requireDev, async (req: Request, res: Response) => {
+  const { guildId } = req.body;
+  if (!guildId || typeof guildId !== 'string') {
+    return res.status(400).json({ error: 'guildId is required' });
+  }
+
+  const cleanId = guildId.trim();
+  const user = (req as any).user;
+
+  try {
+    // Fetch Discord info (name and photo)
+    const { name, icon } = await fetchDiscordGuildInfo(cleanId);
+
+    const guild = await prisma.allowedGuild.upsert({
+      where: { id: cleanId },
+      update: { name, icon },
+      create: {
+        id: cleanId,
+        name,
+        icon,
+        addedBy: user?.username || 'DEV'
+      }
+    });
+
+    return res.json({ success: true, guild });
+  } catch (err: any) {
+    console.error('Failed to add allowed guild:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Dev Only: Delete an allowed server by Discord Guild ID
+ */
+router.delete('/allowed-guilds/:guildId', authenticate, requireDev, async (req: Request, res: Response) => {
+  const { guildId } = req.params;
+
+  try {
+    await prisma.allowedGuild.delete({
+      where: { id: guildId }
+    });
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Dev Only: Add a Super Admin by Discord User ID
+ */
+router.post('/super-admins', authenticate, requireDev, async (req: Request, res: Response) => {
+  const { userId } = req.body;
+  if (!userId || typeof userId !== 'string') {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+
+  const cleanId = userId.trim();
+  const devUser = (req as any).user;
+
+  try {
+    // Fetch Discord user info (username and avatar photo)
+    const { username, avatar } = await fetchDiscordUserInfo(cleanId);
+
+    const superAdmin = await prisma.superAdmin.upsert({
+      where: { id: cleanId },
+      update: { username, avatar },
+      create: {
+        id: cleanId,
+        username,
+        avatar,
+        addedBy: devUser?.username || 'DEV'
+      }
+    });
+
+    return res.json({ success: true, superAdmin });
+  } catch (err: any) {
+    console.error('Failed to add super admin:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Dev Only: Delete a Super Admin by Discord User ID
+ */
+router.delete('/super-admins/:userId', authenticate, requireDev, async (req: Request, res: Response) => {
+  const { userId } = req.params;
+
+  try {
+    await prisma.superAdmin.delete({
+      where: { id: userId }
+    });
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 });
 

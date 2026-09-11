@@ -4,14 +4,15 @@ import { Navbar } from './components/Navbar';
 import { CardsTab } from './pages/CardsTab';
 import { SettingsTab } from './pages/SettingsTab';
 import { SecurityTab } from './pages/SecurityTab';
+import { BotSettingsTab } from './pages/BotSettingsTab';
 import { RestrictedServerView } from './components/RestrictedServerView';
-import { BookOpen, Sliders, ShieldCheck } from 'lucide-react';
+import { BookOpen, Sliders, ShieldCheck, Crown } from 'lucide-react';
 
 export function App() {
   const [user, setUser] = useState<any | null>(null);
   const [guilds, setGuilds] = useState<any[]>([]);
   const [selectedGuild, setSelectedGuild] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<'cards' | 'settings' | 'security'>('cards');
+  const [activeTab, setActiveTab] = useState<'cards' | 'settings' | 'security' | 'bot-settings'>('cards');
 
   const [cards, setCards] = useState<any[]>([]);
   const [settings, setSettings] = useState<any | null>(null);
@@ -263,6 +264,33 @@ export function App() {
             <ShieldCheck size={16} />
             <span>Security</span>
           </button>
+
+          {user?.isDev && (
+            <button
+              className={`tab-btn ${activeTab === 'bot-settings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('bot-settings')}
+              style={{
+                borderColor: activeTab === 'bot-settings' ? 'var(--gold)' : undefined,
+                color: activeTab === 'bot-settings' ? 'var(--gold)' : undefined
+              }}
+            >
+              <Crown size={16} />
+              <span>Bot Settings</span>
+              <span
+                style={{
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  background: 'var(--gold)',
+                  color: '#000',
+                  padding: '0.1rem 0.35rem',
+                  borderRadius: '3px',
+                  marginLeft: '0.25rem'
+                }}
+              >
+                DEV
+              </span>
+            </button>
+          )}
         </div>
       )}
 
@@ -485,6 +513,11 @@ export function App() {
             <div style={{ fontSize: '2rem', animation: 'spin 1s infinite' }}>🌙</div>
             <p style={{ marginTop: '0.75rem', color: 'var(--text-dark-secondary)', fontStyle: 'italic' }}>Loading server data...</p>
           </div>
+        ) : activeTab === 'bot-settings' && user?.isDev ? (
+          <BotSettingsTab
+            currentUser={user}
+            onAllowedGuildsUpdated={(updated) => setAllowedGuilds(updated)}
+          />
         ) : selectedGuild.id !== 'global' && selectedGuild.isAllowed === false ? (
           <RestrictedServerView
             selectedGuild={selectedGuild}
@@ -560,6 +593,13 @@ export function App() {
               <SecurityTab
                 settings={settings}
                 selectedGuildName={selectedGuild.name}
+              />
+            )}
+
+            {activeTab === 'bot-settings' && user?.isDev && (
+              <BotSettingsTab
+                currentUser={user}
+                onAllowedGuildsUpdated={(updated) => setAllowedGuilds(updated)}
               />
             )}
           </>
