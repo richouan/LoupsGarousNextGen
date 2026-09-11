@@ -39,7 +39,7 @@ export class ChatControlService {
     }
 
     // Whitelist check: If the server is not authorized, notify the admin
-    if (!isGuildAllowed(message.guild.id)) {
+    if (!(await isGuildAllowed(message.guild.id))) {
       try {
         await message.reply({
           content: `🔒 **Bot Loup-Garou 2026 • Bêta Privée**\nCette commande est restreinte aux serveurs partenaires officiels. Pour plus d'informations ou pour autoriser ce serveur, contactez **${getContactUser()}**.`

@@ -68,7 +68,7 @@ export class AutoReplyService {
     }
 
     // 4.5. Server Whitelist Check: If server is not authorized, notify about private beta
-    if (guildId && !isGuildAllowed(guildId)) {
+    if (guildId && !(await isGuildAllowed(guildId))) {
       const rateLimit = rateLimiterService.checkRateLimit(
         guildId,
         channelId,

@@ -148,26 +148,70 @@ export async function getAllowedGuildsDetails(): Promise<AllowedGuildRecord[]> {
     }
   }
 
-  const result: AllowedGuildRecord[] = dbGuilds.map((g: any) => ({
-    id: String(g.id),
-    name: String(g.name),
-    icon: g.icon ? String(g.icon) : null,
-    addedBy: g.addedBy ? String(g.addedBy) : null,
-    createdAt: g.createdAt
-  }));
+  const result: AllowedGuildRecord[] = [];
+  for (const g of dbGuilds) {
+    let name = String(g.name);
+    let icon = g.icon ? String(g.icon) : null;
+
+    // If name is a placeholder or icon is missing, try to resolve from prisma.guild or Discord API
+    if (!icon || name.startsWith('Serveur ')) {
+      try {
+        const match = await prisma.guild.findUnique({ where: { id: String(g.id) } });
+        if (match && match.name && !match.name.startsWith('Serveur ')) {
+          name = match.name;
+          icon = match.icon || icon;
+          await prisma.allowedGuild.update({
+            where: { id: String(g.id) },
+            data: { name, icon }
+          }).catch(() => {});
+        } else {
+          const fetched = await fetchDiscordGuildInfo(String(g.id));
+          if (fetched && fetched.name && !fetched.name.startsWith('Serveur ')) {
+            name = fetched.name;
+            icon = fetched.icon || icon;
+            await prisma.allowedGuild.update({
+              where: { id: String(g.id) },
+              data: { name, icon }
+            }).catch(() => {});
+          }
+        }
+      } catch {}
+    }
+
+    result.push({
+      id: String(g.id),
+      name,
+      icon,
+      addedBy: g.addedBy ? String(g.addedBy) : null,
+      createdAt: g.createdAt
+    });
+  }
 
   cachedGuildsDetails = { data: result, cachedAt: now };
   return result;
 }
 
+export function invalidateAllowedGuildsCache(): void {
+  cachedGuildsDetails = null;
+}
+
 export async function fetchDiscordGuildInfo(guildId: string): Promise<{ name: string; icon: string | null }> {
+  // 1. Check if prisma.guild already has the details
+  try {
+    const dbGuild = await prisma.guild.findUnique({ where: { id: guildId } });
+    if (dbGuild && dbGuild.name && !dbGuild.name.startsWith('Serveur ')) {
+      return { name: dbGuild.name, icon: dbGuild.icon };
+    }
+  } catch {}
+
   const botToken = process.env.DISCORD_BOT_TOKEN;
   if (!botToken) {
     return { name: `Serveur ${guildId}`, icon: null };
   }
 
+  // 2. Query Discord API v10
   try {
-    const res = await axios.get(`https://discord.com/api/guilds/${guildId}`, {
+    const res = await axios.get(`https://discord.com/api/v10/guilds/${guildId}`, {
       headers: { Authorization: `Bot ${botToken}` },
       timeout: 4000
     });
@@ -175,7 +219,7 @@ export async function fetchDiscordGuildInfo(guildId: string): Promise<{ name: st
     const iconUrl = g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=256` : null;
     return { name: g.name, icon: iconUrl };
   } catch (err: any) {
-    console.warn(`[fetchDiscordGuildInfo] Could not fetch guild ${guildId} directly:`, err.message);
+    console.warn(`[fetchDiscordGuildInfo] Could not fetch guild ${guildId} from Discord API:`, err.message);
     return { name: `Serveur ${guildId}`, icon: null };
   }
 }

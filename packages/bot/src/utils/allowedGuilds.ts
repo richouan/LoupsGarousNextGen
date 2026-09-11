@@ -15,12 +15,12 @@ let cache: CachedAllowedGuilds | null = null;
 
 export async function syncAllowedGuildsFromBackend(): Promise<CachedAllowedGuilds> {
   const now = Date.now();
-  if (cache && now - cache.cachedAt < 5000) {
+  if (cache && now - cache.cachedAt < 10000) {
     return cache;
   }
 
   try {
-    const res = await axios.get(`${API_BASE_URL}/bot/allowed-guilds`, { timeout: 3000 });
+    const res = await axios.get(`${API_BASE_URL}/bot/allowed-guilds`, { timeout: 3500 });
     cache = {
       isWhitelistEnabled: res.data.isWhitelistEnabled !== false,
       allowedGuildIds: res.data.allowedGuildIds || ['1461119651021979710'],
@@ -30,6 +30,13 @@ export async function syncAllowedGuildsFromBackend(): Promise<CachedAllowedGuild
     };
     return cache;
   } catch (err: any) {
+    // CRITICAL FIX: If cache already exists, DO NOT wipe it out with default fallback!
+    if (cache) {
+      console.warn(`[Bot] Could not refresh allowed guilds (${err.message}), retaining ${cache.allowedGuildIds.length} existing allowed servers in cache.`);
+      cache.cachedAt = now;
+      return cache;
+    }
+
     const envIds = (process.env.ALLOWED_GUILD_IDS || '1461119651021979710')
       .split(',')
       .map((s) => s.trim())
@@ -66,14 +73,13 @@ export function getContactUser(): string {
   return process.env.BOT_CONTACT_USER || 'ezreal';
 }
 
-export function isGuildAllowed(guildId: string | null | undefined): boolean {
+export async function isGuildAllowed(guildId: string | null | undefined): Promise<boolean> {
   if (!guildId) return true;
-  // Trigger background refresh if stale
-  syncAllowedGuildsFromBackend().catch(() => {});
-  if (cache && cache.isWhitelistEnabled === false) {
+  const data = await syncAllowedGuildsFromBackend();
+  if (data.isWhitelistEnabled === false) {
     return true; // Whitelist mode disabled: public access
   }
-  return getAllowedGuildIds().includes(guildId);
+  return data.allowedGuildIds.includes(guildId);
 }
 
 export function getResolvedAllowedGuilds(

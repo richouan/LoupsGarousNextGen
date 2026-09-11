@@ -8,7 +8,8 @@ import {
   fetchDiscordUserInfo,
   getDevUserIds,
   isWhitelistEnabled,
-  setWhitelistEnabled
+  setWhitelistEnabled,
+  invalidateAllowedGuildsCache
 } from '../utils/allowedGuilds';
 import { authenticate } from './guilds.routes';
 import { requireDev } from '../middleware/rbac';
@@ -113,22 +114,47 @@ router.post('/allowed-guilds', authenticate, requireDev, async (req: Request, re
 
   const cleanId = guildId.trim();
   const user = (req as any).user;
+  const userGuilds = (req as any).guilds || [];
 
   try {
-    // Fetch Discord info (name and photo)
-    const { name, icon } = await fetchDiscordGuildInfo(cleanId);
+    // 1. Check user's Discord OAuth guilds session first
+    const matchedUserGuild = userGuilds.find((g: any) => g.id === cleanId);
+    let name = matchedUserGuild?.name;
+    let icon = matchedUserGuild?.icon;
+
+    // 2. Check prisma.guild if not resolved or placeholder
+    if (!name || name.startsWith('Serveur ')) {
+      const dbGuild = await prisma.guild.findUnique({ where: { id: cleanId } });
+      if (dbGuild && dbGuild.name && !dbGuild.name.startsWith('Serveur ')) {
+        name = dbGuild.name;
+        icon = dbGuild.icon || icon;
+      }
+    }
+
+    // 3. Query Discord API v10 if still not resolved
+    if (!name || name.startsWith('Serveur ') || !icon) {
+      const fetched = await fetchDiscordGuildInfo(cleanId);
+      if (fetched && fetched.name && !fetched.name.startsWith('Serveur ')) {
+        name = fetched.name;
+        icon = fetched.icon || icon;
+      }
+    }
+
+    const finalName = name || `Serveur ${cleanId}`;
+    const finalIcon = icon || null;
 
     const guild = await prisma.allowedGuild.upsert({
       where: { id: cleanId },
-      update: { name, icon },
+      update: { name: finalName, icon: finalIcon },
       create: {
         id: cleanId,
-        name,
-        icon,
+        name: finalName,
+        icon: finalIcon,
         addedBy: user?.username || 'DEV'
       }
     });
 
+    invalidateAllowedGuildsCache();
     return res.json({ success: true, guild });
   } catch (err: any) {
     console.error('Failed to add allowed guild:', err);
@@ -146,6 +172,7 @@ router.delete('/allowed-guilds/:guildId', authenticate, requireDev, async (req: 
     await prisma.allowedGuild.delete({
       where: { id: guildId }
     });
+    invalidateAllowedGuildsCache();
     return res.json({ success: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -277,7 +304,17 @@ router.post('/sync-guilds', requireBotAuth, async (req: Request, res: Response) 
           icon: g.icon
         }
       });
+
+      // Automatically sync real name & icon to allowed guilds if whitelisted
+      await prisma.allowedGuild.updateMany({
+        where: { id: g.id },
+        data: {
+          name: g.name,
+          icon: g.icon
+        }
+      }).catch(() => {});
     }
+    invalidateAllowedGuildsCache();
     return res.json({ success: true, count: guilds.length });
   } catch (err: any) {
     console.error('Failed to sync bot guilds:', err);

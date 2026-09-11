@@ -9,7 +9,7 @@ export async function handleInteraction(
   getAllCardsForGuild: (guildId: string | null) => Promise<MatchableCard[]>
 ): Promise<void> {
   // Check if interaction is executed in an authorized server
-  if (interaction.guildId && !isGuildAllowed(interaction.guildId)) {
+  if (interaction.guildId && !(await isGuildAllowed(interaction.guildId))) {
     if (interaction.isAutocomplete()) {
       await interaction.respond([
         {

@@ -90,7 +90,7 @@ export class RolesListService {
     const channelId = message.channel.id;
 
     // 1. Server Whitelist Check
-    if (guildId && !isGuildAllowed(guildId)) {
+    if (guildId && !(await isGuildAllowed(guildId))) {
       const allowedGuilds = getResolvedAllowedGuilds(message.client);
       const { embed, files } = buildRestrictedServerEmbed(allowedGuilds, getContactUser());
       try {

@@ -8,7 +8,7 @@ import { rolesListService } from './services/RolesListService';
 import { handleInteraction } from './events/interactionCreate';
 import { MatchableCard } from './services/CardMatcherService';
 import { deployCommands } from './scripts/deployCommands';
-import { isGuildAllowed, getResolvedAllowedGuilds, getContactUser } from './utils/allowedGuilds';
+import { isGuildAllowed, getResolvedAllowedGuilds, getContactUser, syncAllowedGuildsFromBackend } from './utils/allowedGuilds';
 import { buildRestrictedServerEmbed } from './utils/embedBuilder';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
@@ -100,6 +100,13 @@ export function createBotClient() {
     console.log(`🐺 [Loup-Garou Bot] Connecté en tant que ${c.user.tag}!`);
     console.log(`📡 Prêt à écouter les noms de rôles dans les serveurs et messages privés.`);
 
+    // Eagerly pre-warm allowed guilds cache from backend and schedule periodic background refresh
+    try {
+      await syncAllowedGuildsFromBackend();
+      console.log(`🛡️ Whitelisted servers cache initialized.`);
+    } catch {}
+    setInterval(() => syncAllowedGuildsFromBackend().catch(() => {}), 15000);
+
     // Sync all joined guilds to database
     try {
       const guildsToSync = c.guilds.cache.map((g) => ({
@@ -133,7 +140,7 @@ export function createBotClient() {
       console.log(`🐺 Bot added to server: ${guild.name} (${guild.id})`);
 
       // Check if the joined server is whitelisted
-      if (!isGuildAllowed(guild.id)) {
+      if (!(await isGuildAllowed(guild.id))) {
         console.log(`ℹ️ [Bot] Joined unauthorized server: ${guild.name} (${guild.id}). Sending private beta notice.`);
         try {
           const defaultChannel =
