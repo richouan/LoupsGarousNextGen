@@ -271,7 +271,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                 />
               </label>
               {imageUrl ? (
-                <img key={imageUrl} src={getOptimizedImageUrl(imageUrl, 'preview')} alt="Preview" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+                <img src={getOptimizedImageUrl(imageUrl, 'thumb')} alt="Preview" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
               ) : (
                 <div className="placeholder-image">🐺</div>
               )}
