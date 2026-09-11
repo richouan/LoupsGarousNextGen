@@ -510,15 +510,64 @@ li {
   transform: translateZ(0);
 }
 
-.role-card-compact .card-art img {
+.lazy-image-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.lazy-image-skeleton {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #121218 0%, #1e1e28 50%, #121218 100%);
+  background-size: 200% 200%;
+  animation: skeletonShimmer 2s ease-in-out infinite;
+  z-index: 1;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.lazy-image-emoji {
+  font-size: 2.2rem;
+  opacity: 0.35;
+  filter: grayscale(0.6);
+  animation: pulseEmoji 2.2s ease-in-out infinite;
+}
+
+@keyframes pulseEmoji {
+  0%, 100% { transform: scale(1); opacity: 0.35; }
+  50% { transform: scale(1.08); opacity: 0.55; }
+}
+
+.role-card-compact .card-art img,
+.lazy-image-container img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: top center;
-  transition: transform 0.5s ease;
+  transition: transform 0.5s ease, opacity 0.4s ease;
+  position: relative;
+  z-index: 2;
 }
 
-.role-card-compact:hover .card-art img {
+.lazy-image-container img.loading {
+  opacity: 0;
+}
+
+.lazy-image-container img.loaded {
+  opacity: 1;
+}
+
+.role-card-compact:hover .card-art img,
+.role-card-compact:hover .card-art .lazy-image-container img {
   transform: scale(1.05);
 }
 
@@ -675,7 +724,8 @@ li {
   transition: transform 0.4s ease;
 }
 
-.role-card-medium:hover .card-banner-med img {
+.role-card-medium:hover .card-banner-med img,
+.role-card-medium:hover .card-banner-med .lazy-image-container img {
   transform: scale(1.05);
 }
 

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { CardEditor } from '../components/CardEditor';
 import { DiscordEmbedPreview } from '../components/DiscordEmbedPreview';
+import { LazyCardImage } from '../components/LazyCardImage';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 
 interface CardsTabProps {
@@ -302,7 +303,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
       {/* COMPACT GRID — Small medieval card tiles */}
       {viewMode === 'compact' && (
         <div className="cards-grid-compact">
-          {filteredCards.map((card) => (
+          {filteredCards.map((card, index) => (
             <div
               key={card.id}
               className="role-card-compact"
@@ -311,11 +312,11 @@ export const CardsTab: React.FC<CardsTabProps> = ({
               {/* Artwork */}
               <div className="card-art">
                 {card.imageUrl ? (
-                  <img
+                  <LazyCardImage
                     src={getOptimizedImageUrl(card.imageUrl, 'thumb')}
                     alt={card.name}
-                    loading="lazy"
-                    decoding="async"
+                    placeholderEmoji={campEmoji[card.camp]}
+                    priority={index < 12} // First 2-3 rows load immediately, others as you scroll
                   />
                 ) : (
                   <div className="card-art-placeholder">
@@ -359,7 +360,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
       {/* MEDIUM GRID */}
       {viewMode === 'medium' && (
         <div className="cards-grid-medium">
-          {filteredCards.map((card) => (
+          {filteredCards.map((card, index) => (
             <div
               key={card.id}
               className="role-card-medium"
@@ -367,11 +368,11 @@ export const CardsTab: React.FC<CardsTabProps> = ({
             >
               <div className="card-banner-med" style={{ position: 'relative' }}>
                 {card.imageUrl ? (
-                  <img
+                  <LazyCardImage
                     src={getOptimizedImageUrl(card.imageUrl, 'medium')}
                     alt={card.name}
-                    loading="lazy"
-                    decoding="async"
+                    placeholderEmoji={campEmoji[card.camp]}
+                    priority={index < 6} // First 2-3 rows load immediately, others as you scroll
                   />
                 ) : (
                   <div
