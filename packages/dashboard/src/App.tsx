@@ -276,19 +276,6 @@ export function App() {
             >
               <Crown size={16} />
               <span>Bot Settings</span>
-              <span
-                style={{
-                  fontSize: '0.62rem',
-                  fontWeight: 800,
-                  background: 'var(--gold)',
-                  color: '#000',
-                  padding: '0.1rem 0.35rem',
-                  borderRadius: '3px',
-                  marginLeft: '0.25rem'
-                }}
-              >
-                DEV
-              </span>
             </button>
           )}
         </div>

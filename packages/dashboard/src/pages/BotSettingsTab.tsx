@@ -11,7 +11,15 @@ import {
   RefreshCw,
   ExternalLink,
   Lock,
-  UserCheck
+  UserCheck,
+  Settings,
+  LayoutList,
+  MessageSquare,
+  Terminal,
+  ShieldCheck,
+  FileText,
+  Database,
+  Wrench
 } from 'lucide-react';
 
 interface AllowedGuild {
@@ -42,6 +50,7 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
   const [allowedGuilds, setAllowedGuilds] = useState<AllowedGuild[]>([]);
   const [superAdmins, setSuperAdmins] = useState<SuperAdmin[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSubTab, setActiveSubTab] = useState('servers');
 
   // Form inputs
   const [newGuildId, setNewGuildId] = useState('');
@@ -156,6 +165,19 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
     }
   };
 
+  const sidebarTabs = [
+    { id: 'servers', label: 'Serveurs autorisés', sub: 'Gérez la whitelist', icon: Server },
+    { id: 'admins', label: 'Super Admins', sub: 'Gérez les administrateurs', icon: Crown },
+    { id: 'general', label: 'Paramètres généraux', sub: 'Configuration du bot', icon: Settings },
+    { id: 'game', label: 'Paramètres de jeu', sub: 'Rôles et mécaniques', icon: LayoutList },
+    { id: 'messages', label: 'Messages & Embeds', sub: 'Personnalisation', icon: MessageSquare },
+    { id: 'commands', label: 'Commandes', sub: 'Activation et permissions', icon: Terminal },
+    { id: 'security', label: 'Sécurité', sub: 'Restrictions et protection', icon: ShieldCheck },
+    { id: 'logs', label: 'Logs & Audit', sub: 'Historique des actions', icon: FileText },
+    { id: 'backup', label: 'Backup & Export', sub: 'Sauvegarde', icon: Database },
+    { id: 'tools', label: 'Outils développeur', sub: 'Variables avancées', icon: Wrench },
+  ];
+
   return (
     <div style={{ animation: 'fadeIn 0.25s ease' }}>
       {/* Tab Header */}
@@ -196,10 +218,53 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
-        {/* ========================================================================= */}
-        {/* SECTION 1: SERVEURS AUTORISÉS (WHITELIST) */}
-        {/* ========================================================================= */}
+      <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        {/* Sidebar */}
+        <div style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          {sidebarTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.85rem 1rem',
+                  background: isActive ? 'var(--bg-dark-surface)' : 'transparent',
+                  border: '1px solid',
+                  borderColor: isActive ? 'var(--gold)' : 'transparent',
+                  borderRadius: 'var(--radius-sm)',
+                  color: isActive ? 'var(--gold)' : 'var(--text-cream)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Icon size={18} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.92rem', fontWeight: isActive ? 700 : 500 }}>
+                    {tab.label}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: isActive ? 'rgba(201, 168, 76, 0.8)' : 'var(--text-muted)' }}>
+                    {tab.sub}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Main Content Area */}
+        <div style={{ flex: 1, minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {activeSubTab === 'servers' && (
+            <>
+              {/* ========================================================================= */}
+              {/* SECTION 1: SERVEURS AUTORISÉS (WHITELIST) */}
+              {/* ========================================================================= */}
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
             <Server size={22} color="var(--gold)" />
@@ -370,9 +435,14 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
           </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* SECTION 2: GESTION DES SUPER ADMINS */}
-        {/* ========================================================================= */}
+            </>
+          )}
+
+          {activeSubTab === 'admins' && (
+            <>
+              {/* ========================================================================= */}
+              {/* SECTION 2: GESTION DES SUPER ADMINS */}
+              {/* ========================================================================= */}
         <div className="glass-panel" style={{ padding: '1.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
             <Crown size={22} color="var(--gold)" />
@@ -608,6 +678,31 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
               </div>
             )}
           </div>
+        </div>
+            </>
+          )}
+
+          {/* Placeholders for in-development sections */}
+          {['general', 'game', 'messages', 'commands', 'security', 'logs', 'backup', 'tools'].includes(activeSubTab) && (
+            <div className="glass-panel" style={{ padding: '3rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'rgba(234, 179, 8, 0.1)',
+                color: 'var(--gold)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Wrench size={32} />
+              </div>
+              <h2 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-cream)' }}>En cours de développement</h2>
+              <p style={{ color: 'var(--text-light-muted)', maxWidth: '400px', margin: '0 auto', lineHeight: 1.5 }}>
+                Cette section sera bientôt disponible. Elle vous permettra de configurer en détail les options avancées de votre instance Loup-Garou NextGen.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
