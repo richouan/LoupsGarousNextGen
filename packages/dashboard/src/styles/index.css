@@ -477,6 +477,17 @@ li {
   margin-top: 1.5rem;
 }
 
+.cards-scroll-sentinel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem 2rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 /* ====== COMPACT ROLE CARD ====== */
 .role-card-compact {
   background: var(--bg-dark-surface);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Plus,
   Search,
@@ -81,6 +81,48 @@ export const CardsTab: React.FC<CardsTabProps> = ({
 
     return result;
   }, [cards, search, campFilter, sortBy]);
+
+  // Progressive row reveal (3-4 rows initial, more revealed as user scrolls)
+  const initialBatch = viewMode === 'compact' ? 18 : 10;
+  const [visibleCount, setVisibleCount] = useState(initialBatch);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset count whenever filters or viewMode change
+  useEffect(() => {
+    setVisibleCount(viewMode === 'compact' ? 18 : 10);
+  }, [search, campFilter, sortBy, viewMode]);
+
+  // Observer to reveal more roles when scrolling near the bottom
+  useEffect(() => {
+    if (visibleCount >= filteredCards.length) return;
+
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting) {
+          const step = viewMode === 'compact' ? 12 : 6;
+          setVisibleCount((prev) => Math.min(prev + step, filteredCards.length));
+        }
+      },
+      {
+        rootMargin: '300px 0px',
+        threshold: 0.05
+      }
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [visibleCount, filteredCards.length, viewMode]);
+
+  const visibleCards = useMemo(() => {
+    return filteredCards.slice(0, visibleCount);
+  }, [filteredCards, visibleCount]);
 
   const campBadgeClass: Record<string, string> = {
     VILLAGEOIS: 'badge-village',
@@ -303,7 +345,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
       {/* COMPACT GRID — Small medieval card tiles */}
       {viewMode === 'compact' && (
         <div className="cards-grid-compact">
-          {filteredCards.map((card, index) => (
+          {visibleCards.map((card, index) => (
             <div
               key={card.id}
               className="role-card-compact"
@@ -359,7 +401,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
       {/* MEDIUM GRID */}
       {viewMode === 'medium' && (
         <div className="cards-grid-medium">
-          {filteredCards.map((card, index) => (
+          {visibleCards.map((card, index) => (
             <div
               key={card.id}
               className="role-card-medium"
@@ -423,6 +465,17 @@ export const CardsTab: React.FC<CardsTabProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Sentinel for progressive scroll loading */}
+      {visibleCount < filteredCards.length && (
+        <div ref={sentinelRef} className="cards-scroll-sentinel">
+          <svg className="lazy-circular-spinner" viewBox="0 0 50 50" style={{ width: '26px', height: '26px' }}>
+            <circle className="lazy-spinner-track" cx="25" cy="25" r="18" fill="none" strokeWidth="3.5" />
+            <circle className="lazy-spinner-path" cx="25" cy="25" r="18" fill="none" strokeWidth="3.5" />
+          </svg>
+          <span>Défilez pour afficher plus de rôles...</span>
         </div>
       )}
 
