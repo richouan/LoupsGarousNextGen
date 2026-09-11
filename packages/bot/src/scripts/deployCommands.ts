@@ -1,4 +1,4 @@
-import { REST, Routes, SlashCommandBuilder } from 'discord.js';
+import { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -12,7 +12,16 @@ export const commands = [
         .setName('nom')
         .setDescription('Nom du rôle (ex: Chasseur, Voyante, Sorcière)')
         .setRequired(true)
+        .setAutocomplete(true)
     ),
+  new SlashCommandBuilder()
+    .setName('sed')
+    .setDescription('Ferme la discussion du salon (Nuit tombée)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+  new SlashCommandBuilder()
+    .setName('hel')
+    .setDescription('Ouvre la discussion du salon (Journée & Débats)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
   new SlashCommandBuilder()
     .setName('cartes')
     .setDescription('Affiche la liste de tous les rôles et cartes disponibles'),

@@ -7,6 +7,41 @@ export async function handleInteraction(
   getCardById: (cardId: string) => Promise<MatchableCard | null>,
   getAllCardsForGuild: (guildId: string | null) => Promise<MatchableCard[]>
 ): Promise<void> {
+  // 0. Handle Autocomplete for Slash Commands
+  if (interaction.isAutocomplete()) {
+    const { commandName } = interaction;
+    if (commandName === 'carte') {
+      const focused = interaction.options.getFocused(true);
+      if (focused.name === 'nom') {
+        const query = (focused.value || '').trim().toLowerCase();
+        const cards = await getAllCardsForGuild(interaction.guildId);
+
+        const filtered = cards
+          .filter((c) => {
+            if (!query) return true;
+            return (
+              c.name.toLowerCase().includes(query) ||
+              (c.slug && c.slug.toLowerCase().includes(query)) ||
+              (c.camp && c.camp.toLowerCase().includes(query))
+            );
+          })
+          .slice(0, 25);
+
+        await interaction.respond(
+          filtered.map((c) => {
+            const campEmoji =
+              c.camp === 'LOUPS' ? '🐺' : c.camp === 'SOLITAIRE' ? '⚖️' : '🛡️';
+            return {
+              name: `${campEmoji} ${c.name}`,
+              value: c.name
+            };
+          })
+        );
+        return;
+      }
+    }
+  }
+
   // 1. Handle Button Click for Secret Card Reveal
   if (interaction.isButton()) {
     if (interaction.customId.startsWith('reveal_card:')) {
@@ -40,15 +75,58 @@ export async function handleInteraction(
   if (interaction.isChatInputCommand()) {
     const { commandName } = interaction;
 
+    if (commandName === 'sed' || commandName === 'hel') {
+      if (!interaction.guild || !interaction.channel || !('permissionOverwrites' in interaction.channel)) {
+        await interaction.reply({ content: '❌ Cette commande doit être utilisée dans un salon textuel.', ephemeral: true });
+        return;
+      }
+
+      const isAdmin =
+        interaction.memberPermissions?.has('ManageChannels') ||
+        interaction.memberPermissions?.has('Administrator') ||
+        interaction.guild.ownerId === interaction.user.id;
+
+      if (!isAdmin) {
+        await interaction.reply({ content: '❌ Seuls les administrateurs ou narrateurs peuvent gérer ce salon.', ephemeral: true });
+        return;
+      }
+
+      const textChannel = interaction.channel as any;
+      const everyoneRole = interaction.guild.roles.everyone;
+
+      try {
+        if (commandName === 'sed') {
+          await textChannel.permissionOverwrites.edit(everyoneRole, { SendMessages: false });
+          await interaction.reply({
+            content: `🔒 **تم إغلاق المحادثة | Chat Verrouillé**\n🌙 *حلّ الليل في القرية... الصمت والهدوء يعم المكان!*`
+          });
+        } else {
+          await textChannel.permissionOverwrites.edit(everyoneRole, { SendMessages: true });
+          await interaction.reply({
+            content: `🔓 **تم فتح المحادثة | Chat Déverrouillé**\n☀️ *أشرقت الشمس واستيقظت القرية... بدأت النقاشات والتحريات!*`
+          });
+        }
+      } catch (err: any) {
+        console.error('[Slash sed/hel] Permission error:', err);
+        await interaction.reply({
+          content: `⚠️ **خطأ في الصلاحيات**: يحتاج البوت إلى صلاحية **Manage Channels** (Gérer les salons).`,
+          ephemeral: true
+        });
+      }
+      return;
+    }
+
     if (commandName === 'carte') {
       const roleName = interaction.options.getString('nom', true);
       const cards = await getAllCardsForGuild(interaction.guildId);
-      const lower = roleName.toLowerCase();
-      const card = cards.find(
-        (c) =>
-          c.name.toLowerCase() === lower ||
-          c.slug.toLowerCase() === lower
-      );
+      const lower = roleName.trim().toLowerCase();
+      const card =
+        cards.find(
+          (c) =>
+            c.name.toLowerCase() === lower ||
+            c.slug?.toLowerCase() === lower
+        ) ||
+        cards.find((c) => lower.includes(c.name.toLowerCase()));
 
       if (!card) {
         await interaction.reply({

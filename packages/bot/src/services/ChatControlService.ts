@@ -1,0 +1,96 @@
+import { Message, PermissionsBitField, TextChannel, NewsChannel, ThreadChannel } from 'discord.js';
+
+const CLOSE_TRIGGERS = new Set(['sed', '!sed', '/sed', 'سد', 'sedd', 'lock', '!lock']);
+const OPEN_TRIGGERS = new Set(['7el', '!7el', '/7el', 'hel', '!hel', '7al', '!7al', 'حل', 'unlock', '!unlock']);
+
+export class ChatControlService {
+  /**
+   * Listens for admin triggers 'sed' (close chat) and '7el' (open chat)
+   * Returns true if a command was executed
+   */
+  public async handleMessage(message: Message): Promise<boolean> {
+    if (!message.guild || message.author.bot) {
+      return false;
+    }
+
+    const cleanContent = message.content.trim().toLowerCase();
+    const isClose = CLOSE_TRIGGERS.has(cleanContent);
+    const isOpen = OPEN_TRIGGERS.has(cleanContent);
+
+    if (!isClose && !isOpen) {
+      return false;
+    }
+
+    // Permission check: only admins or channel managers can close/open chat
+    const member = message.member;
+    if (!member) {
+      return false;
+    }
+
+    const isAdmin =
+      member.permissions.has(PermissionsBitField.Flags.Administrator) ||
+      member.permissions.has(PermissionsBitField.Flags.ManageChannels) ||
+      member.permissions.has(PermissionsBitField.Flags.ManageGuild) ||
+      message.guild.ownerId === message.author.id;
+
+    if (!isAdmin) {
+      return false; // Silently ignore non-admins so regular chat isn't disrupted
+    }
+
+    const channel = message.channel;
+    if (!('permissionOverwrites' in channel) || typeof (channel as TextChannel).permissionOverwrites?.edit !== 'function') {
+      return false;
+    }
+
+    const textChannel = channel as TextChannel | NewsChannel;
+    const everyoneRole = message.guild.roles.everyone;
+
+    try {
+      if (isClose) {
+        // Lock channel for @everyone
+        await textChannel.permissionOverwrites.edit(everyoneRole, {
+          SendMessages: false
+        });
+
+        try {
+          await message.react('🔒');
+          await message.react('🌙');
+        } catch {}
+
+        await textChannel.send({
+          content: `🔒 **تم إغلاق المحادثة | Chat Verrouillé**\n🌙 *حلّ الليل في القرية... الصمت والهدوء يعم المكان!*`
+        });
+        return true;
+      }
+
+      if (isOpen) {
+        // Unlock channel for @everyone
+        await textChannel.permissionOverwrites.edit(everyoneRole, {
+          SendMessages: true
+        });
+
+        try {
+          await message.react('🔓');
+          await message.react('☀️');
+        } catch {}
+
+        await textChannel.send({
+          content: `🔓 **تم فتح المحادثة | Chat Déverrouillé**\n☀️ *أشرقت الشمس واستيقظت القرية... بدأت النقاشات والتحريات!*`
+        });
+        return true;
+      }
+    } catch (err: any) {
+      console.error('[ChatControlService] Failed to modify channel permissions:', err);
+      try {
+        await message.reply({
+          content: `⚠️ **خطأ في الصلاحيات**: يحتاج البوت إلى صلاحية **Manage Channels** (Gérer les salons) لإغلاق أو فتح المحادثة.`
+        });
+      } catch {}
+      return true;
+    }
+
+    return false;
+  }
+}
+
+export const chatControlService = new ChatControlService();

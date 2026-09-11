@@ -3,6 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import axios from 'axios';
 import { autoReplyService } from './services/AutoReplyService';
+import { chatControlService } from './services/ChatControlService';
 import { handleInteraction } from './events/interactionCreate';
 import { MatchableCard } from './services/CardMatcherService';
 import { deployCommands } from './scripts/deployCommands';
@@ -11,7 +12,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const API_BASE_URL = process.env.SERVER_API_URL || 'http://localhost:3001/api';
 
-// In-memory cache for ultra-low latency bot replies (5-second cache)
+// In-memory cache for ultra-low latency bot replies (3-second TTL for near instant dashboard sync)
 interface CacheEntry<T> {
   data: T;
   cachedAt: number;
@@ -23,7 +24,7 @@ async function fetchGuildConfig(guildId: string | null) {
   const cached = configCache.get(cacheKey);
   const now = Date.now();
 
-  if (cached && now - cached.cachedAt < 10000) {
+  if (cached && now - cached.cachedAt < 3000) {
     return cached.data;
   }
 
@@ -127,8 +128,15 @@ export function createBotClient() {
     } catch {}
   });
 
-  // Message listening for exact role names
+  // Message listening for exact role names and admin channel lock/unlock (sed / 7el)
   client.on(Events.MessageCreate, async (message) => {
+    // 1. Check for 'sed' (close chat) and '7el' (open chat) from admins
+    const handled = await chatControlService.handleMessage(message);
+    if (handled) {
+      return;
+    }
+
+    // 2. Process role card automatic responses
     await autoReplyService.handleMessage(message, fetchGuildConfig);
   });
 
