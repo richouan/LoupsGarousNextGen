@@ -34,12 +34,11 @@ const allowedOrigins = [
 ];
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow same-origin requests (no origin header) and whitelisted origins
+    // Allow same-origin requests (no origin header, e.g. same-host frontend or internal requests) and whitelisted origins
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(null, true); // permissive in production for now
+      return callback(null, true);
     }
+    return callback(new Error(`Blocked by CORS policy: Origin ${origin} is not allowed`));
   },
   credentials: true
 }));

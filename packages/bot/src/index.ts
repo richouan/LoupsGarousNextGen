@@ -13,6 +13,16 @@ import { buildRestrictedServerEmbed } from './utils/embedBuilder';
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const API_BASE_URL = process.env.SERVER_API_URL || 'http://localhost:3001/api';
+const BOT_SECRET = process.env.INTERNAL_BOT_SECRET || process.env.DISCORD_BOT_TOKEN || '';
+
+// Internal authenticated client to securely interact with backend API
+const botApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 3500,
+  headers: {
+    'x-bot-secret': BOT_SECRET
+  }
+});
 
 // In-memory cache for ultra-low latency bot replies (3-second TTL for near instant dashboard sync)
 interface CacheEntry<T> {
@@ -32,10 +42,10 @@ async function fetchGuildConfig(guildId: string | null) {
 
   try {
     const url = guildId
-      ? `${API_BASE_URL}/bot/guild-config/${guildId}`
-      : `${API_BASE_URL}/bot/default-config`;
+      ? `/bot/guild-config/${guildId}`
+      : `/bot/default-config`;
 
-    const res = await axios.get(url, { timeout: 3000 });
+    const res = await botApi.get(url);
     const data = res.data;
     configCache.set(cacheKey, { data, cachedAt: now });
     return data;
@@ -62,7 +72,7 @@ async function fetchGuildConfig(guildId: string | null) {
 
 async function getCardById(cardId: string): Promise<MatchableCard | null> {
   try {
-    const res = await axios.get(`${API_BASE_URL}/cards/${cardId}`, { timeout: 3000 });
+    const res = await botApi.get(`/bot/card/${cardId}`);
     return res.data;
   } catch {
     return null;
@@ -96,7 +106,7 @@ export function createBotClient() {
         name: g.name,
         icon: g.iconURL()
       }));
-      await axios.post(`${API_BASE_URL}/bot/sync-guilds`, { guilds: guildsToSync }, { timeout: 3000 });
+      await botApi.post('/bot/sync-guilds', { guilds: guildsToSync });
       console.log(`✨ Synced ${guildsToSync.length} guilds to backend database.`);
     } catch (err: any) {
       console.warn(`[Bot] Could not sync guilds to server:`, err.message);
@@ -115,10 +125,9 @@ export function createBotClient() {
   // When bot joins a new server
   client.on(Events.GuildCreate, async (guild) => {
     try {
-      await axios.post(
-        `${API_BASE_URL}/bot/sync-guilds`,
-        { guilds: [{ id: guild.id, name: guild.name, icon: guild.iconURL() }] },
-        { timeout: 3000 }
+      await botApi.post(
+        '/bot/sync-guilds',
+        { guilds: [{ id: guild.id, name: guild.name, icon: guild.iconURL() }] }
       );
       console.log(`🐺 Bot added to server: ${guild.name} (${guild.id})`);
 

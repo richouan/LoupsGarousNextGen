@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../db/prisma';
 import {
   getAllowedGuildIds,
@@ -14,6 +14,32 @@ import { authenticate } from './guilds.routes';
 import { requireDev } from '../middleware/rbac';
 
 const router = Router();
+
+/**
+ * SEC-02 FIX: Require internal bot secret authentication.
+ * Protects server-to-bot endpoints against unauthorized external requests.
+ */
+export function requireBotAuth(req: Request, res: Response, next: NextFunction) {
+  const secretHeader = req.headers['x-bot-secret'] || req.headers['authorization'];
+  const expectedSecret = process.env.INTERNAL_BOT_SECRET || process.env.DISCORD_BOT_TOKEN;
+
+  if (!expectedSecret) {
+    console.warn('[Security Warning] No INTERNAL_BOT_SECRET or DISCORD_BOT_TOKEN configured on server');
+    return res.status(500).json({ error: 'Server misconfiguration: Bot authentication secret missing' });
+  }
+
+  const token = typeof secretHeader === 'string' && secretHeader.startsWith('Bearer ')
+    ? secretHeader.slice(7).trim()
+    : typeof secretHeader === 'string' && secretHeader.startsWith('Bot ')
+    ? secretHeader.slice(4).trim()
+    : secretHeader;
+
+  if (!token || token !== expectedSecret) {
+    return res.status(403).json({ error: 'Forbidden: Invalid or missing bot authentication secret' });
+  }
+
+  return next();
+}
 
 /**
  * Public endpoint to retrieve allowed servers and development contact info
@@ -179,7 +205,7 @@ router.delete('/super-admins/:userId', authenticate, requireDev, async (req: Req
 /**
  * Fast endpoint used by Discord Bot to retrieve cached settings & cards
  */
-router.get('/guild-config/:guildId', async (req: Request, res: Response) => {
+router.get('/guild-config/:guildId', requireBotAuth, async (req: Request, res: Response) => {
   const { guildId } = req.params;
 
   try {
@@ -231,7 +257,7 @@ router.get('/guild-config/:guildId', async (req: Request, res: Response) => {
 /**
  * Sync active guilds from bot to backend database
  */
-router.post('/sync-guilds', async (req: Request, res: Response) => {
+router.post('/sync-guilds', requireBotAuth, async (req: Request, res: Response) => {
   const { guilds } = req.body;
   if (!Array.isArray(guilds)) {
     return res.status(400).json({ error: 'guilds must be an array' });
@@ -262,7 +288,7 @@ router.post('/sync-guilds', async (req: Request, res: Response) => {
 /**
  * Default configuration for direct messages (DMs)
  */
-router.get('/default-config', async (_req: Request, res: Response) => {
+router.get('/default-config', requireBotAuth, async (_req: Request, res: Response) => {
   try {
     const cards = await prisma.card.findMany({
       where: { guildId: null, isEnabled: true }

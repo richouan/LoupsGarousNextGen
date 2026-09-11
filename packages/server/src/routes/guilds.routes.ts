@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import prisma from '../db/prisma';
-import { isGuildAllowed, getAllowedGuildsDetails, getContactUser } from '../utils/allowedGuilds';
+import { isGuildAllowed, getAllowedGuildsDetails, getContactUser, isSuperAdminUser } from '../utils/allowedGuilds';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'loup-garou-secret-key-2026';
@@ -27,9 +27,44 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 }
 
 /**
+ * SEC-01 FIX: Authorization middleware to prevent IDOR attacks.
+ * Verifies that the authenticated user is the Owner or Administrator of :guildId.
+ * Super Admins and Root Devs have global bypass rights.
+ */
+export async function requireGuildAdmin(req: Request, res: Response, next: NextFunction) {
+  const { guildId } = req.params;
+  const user = (req as any).user;
+  const userGuilds = (req as any).guilds || [];
+
+  if (!user) {
+    return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
+  }
+
+  // Super Admins & Root Devs have global privileges
+  if (user.isSuperAdmin || user.isDev || (await isSuperAdminUser(user.id))) {
+    return next();
+  }
+
+  if (guildId === 'global') {
+    return res.status(403).json({ error: 'FORBIDDEN', message: 'Accès Super Admin requis pour les ressources globales.' });
+  }
+
+  // Check if user owns or administrates this guild
+  const matchedGuild = userGuilds.find((g: any) => g.id === guildId);
+  if (!matchedGuild || (!matchedGuild.owner && !matchedGuild.isAdmin)) {
+    return res.status(403).json({
+      error: 'FORBIDDEN',
+      message: 'Vous devez être propriétaire ou administrateur de ce serveur Discord pour effectuer cette action.'
+    });
+  }
+
+  return next();
+}
+
+/**
  * Get channels & categories for a guild directly from Discord API
  */
-router.get('/:guildId/channels', authenticate, async (req: Request, res: Response) => {
+router.get('/:guildId/channels', authenticate, requireGuildAdmin, async (req: Request, res: Response) => {
   const { guildId } = req.params;
   const botToken = getBotToken();
 
@@ -74,7 +109,7 @@ router.get('/:guildId/channels', authenticate, async (req: Request, res: Respons
 /**
  * Get guild settings
  */
-router.get('/:guildId/settings', authenticate, async (req: Request, res: Response) => {
+router.get('/:guildId/settings', authenticate, requireGuildAdmin, async (req: Request, res: Response) => {
   const { guildId } = req.params;
 
   let setting = await prisma.guildSetting.findUnique({
@@ -121,7 +156,7 @@ router.get('/:guildId/settings', authenticate, async (req: Request, res: Respons
 /**
  * Update guild settings
  */
-router.put('/:guildId/settings', authenticate, async (req: Request, res: Response) => {
+router.put('/:guildId/settings', authenticate, requireGuildAdmin, async (req: Request, res: Response) => {
   const { guildId } = req.params;
 
   if (!(await isGuildAllowed(guildId))) {
@@ -198,7 +233,7 @@ router.put('/:guildId/settings', authenticate, async (req: Request, res: Respons
 /**
  * Get all cards for a guild (Official + Custom)
  */
-router.get('/:guildId/cards', authenticate, async (req: Request, res: Response) => {
+router.get('/:guildId/cards', authenticate, requireGuildAdmin, async (req: Request, res: Response) => {
   const { guildId } = req.params;
 
   const cards = await prisma.card.findMany({
