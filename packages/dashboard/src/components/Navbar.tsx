@@ -79,9 +79,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         style={{ cursor: 'pointer' }}
         title="Dashboard Navigation"
       >
-        <img src="/logo.png" alt="Loup-Garou NextGen" style={{ height: '48px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
+        <img src="/logo.png" alt="Loups Garous NextGen" style={{ height: '48px', width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.6))' }} />
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
-          <span className="logo-title">LOUPS-GAROUS</span>
+          <span className="logo-title">LOUPS GAROUS</span>
           <span className="logo-title" style={{ fontSize: '0.85rem', letterSpacing: '0.25em', marginTop: '-4px' }}>NEXTGEN</span>
         </div>
       </div>
