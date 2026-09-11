@@ -1,7 +1,29 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../db/prisma';
+import { getAllowedGuildIds, getAllowedGuildsDetails, getContactUser } from '../utils/allowedGuilds';
 
 const router = Router();
+
+/**
+ * Public endpoint to retrieve allowed servers and development contact info
+ */
+router.get('/allowed-guilds', async (_req: Request, res: Response) => {
+  try {
+    const allowedGuildIds = getAllowedGuildIds();
+    const allowedGuilds = await getAllowedGuildsDetails();
+    const contactUser = getContactUser();
+
+    return res.json({
+      allowedGuildIds,
+      allowedGuilds,
+      contactUser,
+      status: 'under_development'
+    });
+  } catch (err: any) {
+    console.error('[bot.routes] Failed to get allowed guilds:', err);
+    return res.status(500).json({ error: 'Failed to retrieve allowed guilds' });
+  }
+});
 
 /**
  * Fast endpoint used by Discord Bot to retrieve cached settings & cards

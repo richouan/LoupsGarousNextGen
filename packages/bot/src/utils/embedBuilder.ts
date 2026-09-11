@@ -142,3 +142,40 @@ export function buildSecretRevealRow(cardId: string, cardName: string): ActionRo
   return new ActionRowBuilder<ButtonBuilder>().addComponents(button, siteButton);
 }
 
+export function buildRestrictedServerEmbed(
+  allowedGuilds: Array<{ name: string; icon?: string | null }>,
+  contactUser = 'ezreal'
+): { embed: EmbedBuilder; files: AttachmentBuilder[] } {
+  const serverListText = allowedGuilds
+    .map((g, idx) => `🏰 **Serveur ${idx + 1} :** \`${g.name}\``)
+    .join('\n');
+
+  const embed = new EmbedBuilder()
+    .setTitle('🔒 Loup-Garou 2026 • Bêta Privée (Serveur Non Autorisé)')
+    .setColor(0xeab308)
+    .setDescription(
+      `⚠️ **Ce bot est actuellement en phase de développement fermé.**\n\n` +
+      `Son utilisation et ses commandes sont temporairement réservées aux serveurs partenaires officiels :\n\n` +
+      `${serverListText}\n\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `📩 **Demande d'accès & Partenariats :**\n` +
+      `Pour ajouter votre serveur ou pour toute information, veuillez contacter **${contactUser}** sur Discord.\n\n` +
+      `*⚠️ هذا البوت قيد التطوير حالياً ومتاح حصرياً في السيرفرات الرسمية المحددة أعلاه. يرجى التواصل مع **${contactUser}** للمزيد من المعلومات.*`
+    )
+    .setFooter({
+      text: `Loup-Garou 2026 • Contact: ${contactUser} • Under Development`
+    })
+    .setTimestamp();
+
+  const files: AttachmentBuilder[] = [];
+
+  // Use the first allowed server's icon as thumbnail
+  const firstWithIcon = allowedGuilds.find((g) => g.icon);
+  if (firstWithIcon && firstWithIcon.icon) {
+    embed.setThumbnail(firstWithIcon.icon);
+  }
+
+  return { embed, files };
+}
+
+

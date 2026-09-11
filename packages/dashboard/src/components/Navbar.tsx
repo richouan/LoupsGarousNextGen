@@ -8,6 +8,7 @@ interface Guild {
   hasBot: boolean;
   isAdmin: boolean;
   owner?: boolean;
+  isAllowed?: boolean;
   inviteUrl?: string;
 }
 
@@ -90,6 +91,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 className="guild-picker"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
+                style={{ position: 'relative' }}
               >
                 {selectedGuild?.icon ? (
                   <img
@@ -101,6 +103,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="guild-avatar">
                     {selectedGuild?.name ? selectedGuild.name.substring(0, 2).toUpperCase() : 'LG'}
                   </div>
+                )}
+                {selectedGuild && selectedGuild.isAllowed === false && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: '-2px',
+                      right: '-2px',
+                      background: '#f59e0b',
+                      borderRadius: '50%',
+                      width: '16px',
+                      height: '16px',
+                      fontSize: '9px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid #0f172a',
+                      boxShadow: '0 0 6px rgba(245, 158, 11, 0.6)'
+                    }}
+                    title="Serveur en Bêta Privée (Accès Restreint)"
+                  >
+                    🔒
+                  </span>
                 )}
               </button>
 
@@ -196,9 +220,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 >
                                   {g.name}
                                 </div>
-                                <div style={{ fontSize: '0.65rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                  <span>● Bot Active</span>
-                                </div>
+                                {g.isAllowed === false ? (
+                                  <div style={{ fontSize: '0.65rem', color: '#facc15', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <span>🔒 Bêta Privée</span>
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: '0.65rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                    <span>● Partenaire Officiel</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

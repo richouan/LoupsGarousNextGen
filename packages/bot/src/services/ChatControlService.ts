@@ -1,4 +1,5 @@
 import { Message, PermissionsBitField, TextChannel, NewsChannel, ThreadChannel } from 'discord.js';
+import { isGuildAllowed, getContactUser } from '../utils/allowedGuilds';
 
 const CLOSE_TRIGGERS = new Set(['sed', '!sed', '/sed', 'سد', 'sedd', 'lock', '!lock']);
 const OPEN_TRIGGERS = new Set(['7el', '!7el', '/7el', 'hel', '!hel', '7al', '!7al', 'حل', 'unlock', '!unlock']);
@@ -35,6 +36,16 @@ export class ChatControlService {
 
     if (!isAdmin) {
       return false; // Silently ignore non-admins so regular chat isn't disrupted
+    }
+
+    // Whitelist check: If the server is not authorized, notify the admin
+    if (!isGuildAllowed(message.guild.id)) {
+      try {
+        await message.reply({
+          content: `🔒 **Bot Loup-Garou 2026 • Bêta Privée**\nCette commande est restreinte aux serveurs partenaires officiels. Pour plus d'informations ou pour autoriser ce serveur, contactez **${getContactUser()}**.`
+        });
+      } catch {}
+      return true;
     }
 
     const channel = message.channel;

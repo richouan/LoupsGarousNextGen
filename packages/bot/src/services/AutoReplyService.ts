@@ -2,7 +2,8 @@ import { Message, TextChannel } from 'discord.js';
 import { cardMatcherService, MatchableCard } from './CardMatcherService';
 import { channelFilterService, ChannelFilterOptions } from './ChannelFilterService';
 import { rateLimiterService } from './RateLimiterService';
-import { buildCardEmbed, buildCardActionRow, buildSecretRevealRow } from '../utils/embedBuilder';
+import { buildCardEmbed, buildCardActionRow, buildSecretRevealRow, buildRestrictedServerEmbed } from '../utils/embedBuilder';
+import { isGuildAllowed, getResolvedAllowedGuilds, getContactUser } from '../utils/allowedGuilds';
 
 export interface GuildConfigWithCards {
   settings: {
@@ -64,6 +65,27 @@ export class AutoReplyService {
     const matchedCard = cardMatcherService.findMatch(message.content, cards);
     if (!matchedCard) {
       return false; // Not a role inquiry, normal chat message
+    }
+
+    // 4.5. Server Whitelist Check: If server is not authorized, notify about private beta
+    if (guildId && !isGuildAllowed(guildId)) {
+      const rateLimit = rateLimiterService.checkRateLimit(
+        guildId,
+        channelId,
+        message.author.id,
+        settings.userCooldownSeconds || 5,
+        settings.channelCooldownSeconds || 2
+      );
+      if (!rateLimit.allowed) {
+        return false;
+      }
+
+      const allowedGuilds = getResolvedAllowedGuilds(message.client);
+      const { embed, files } = buildRestrictedServerEmbed(allowedGuilds, getContactUser());
+      try {
+        await message.reply({ embeds: [embed], files });
+      } catch {}
+      return true;
     }
 
     // 5. Anti-Spam Rate Limit Check

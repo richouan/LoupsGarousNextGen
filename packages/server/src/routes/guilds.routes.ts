@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import prisma from '../db/prisma';
+import { isGuildAllowed, getAllowedGuildsDetails, getContactUser } from '../utils/allowedGuilds';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'loup-garou-secret-key-2026';
@@ -122,6 +123,15 @@ router.get('/:guildId/settings', authenticate, async (req: Request, res: Respons
  */
 router.put('/:guildId/settings', authenticate, async (req: Request, res: Response) => {
   const { guildId } = req.params;
+
+  if (!isGuildAllowed(guildId)) {
+    return res.status(403).json({
+      error: 'GUILD_NOT_ALLOWED',
+      message: 'Ce serveur n’est pas autorisé. Le bot est en développement fermé. Contactez ezreal.',
+      allowedGuilds: await getAllowedGuildsDetails(),
+      contactUser: getContactUser()
+    });
+  }
   const {
     prefix,
     autoReplyEnabled,

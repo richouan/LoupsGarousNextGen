@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar';
 import { CardsTab } from './pages/CardsTab';
 import { SettingsTab } from './pages/SettingsTab';
 import { SecurityTab } from './pages/SecurityTab';
+import { RestrictedServerView } from './components/RestrictedServerView';
 import { BookOpen, Sliders, ShieldCheck } from 'lucide-react';
 
 export function App() {
@@ -15,6 +16,8 @@ export function App() {
   const [cards, setCards] = useState<any[]>([]);
   const [settings, setSettings] = useState<any | null>(null);
   const [channels, setChannels] = useState<any[]>([]);
+  const [allowedGuilds, setAllowedGuilds] = useState<any[]>([]);
+  const [contactUser, setContactUser] = useState<string>('ezreal');
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(() => {
     const hasToken = Boolean(getSavedToken());
@@ -24,6 +27,17 @@ export function App() {
   });
 
   const authInitRef = React.useRef(false);
+
+  // Fetch allowed official partner guilds
+  useEffect(() => {
+    api
+      .get('/bot/allowed-guilds')
+      .then((res) => {
+        if (res.data.allowedGuilds) setAllowedGuilds(res.data.allowedGuilds);
+        if (res.data.contactUser) setContactUser(res.data.contactUser);
+      })
+      .catch(() => {});
+  }, []);
 
   // Initialize auth and restore last server
   useEffect(() => {
@@ -36,9 +50,20 @@ export function App() {
       const urlToken = urlParams.get('token');
       const code = urlParams.get('code');
 
-      const finalizeUserSession = (userData: any, guildsData: any[]) => {
+      const finalizeUserSession = (
+        userData: any,
+        guildsData: any[],
+        allowedGuildsData?: any[],
+        contactUserData?: string
+      ) => {
         setUser(userData);
         setGuilds(guildsData || []);
+        if (allowedGuildsData && allowedGuildsData.length > 0) {
+          setAllowedGuilds(allowedGuildsData);
+        }
+        if (contactUserData) {
+          setContactUser(contactUserData);
+        }
 
         // Restore last server if valid, or default to first server with bot
         const lastGuildId = localStorage.getItem('lg_last_guild_id');
@@ -47,7 +72,9 @@ export function App() {
         if (matched) {
           setSelectedGuild(matched);
         } else {
-          const firstWithBot = ownedGuilds.find((g: any) => g.hasBot);
+          // Prefer an allowed server with bot first!
+          const firstAllowedWithBot = ownedGuilds.find((g: any) => g.hasBot && g.isAllowed !== false);
+          const firstWithBot = firstAllowedWithBot || ownedGuilds.find((g: any) => g.hasBot);
           if (firstWithBot) {
             setSelectedGuild(firstWithBot);
             localStorage.setItem('lg_last_guild_id', firstWithBot.id);
@@ -65,7 +92,7 @@ export function App() {
             return;
           }
 
-          finalizeUserSession(res.data.user, res.data.guilds);
+          finalizeUserSession(res.data.user, res.data.guilds, res.data.allowedGuilds, res.data.contactUser);
         } catch (err: any) {
           console.error('Session validation check failed:', err);
           // Only clear session if token is explicitly expired or unauthorized (401 / 403)
@@ -80,7 +107,7 @@ export function App() {
         window.history.replaceState({}, document.title, '/');
         try {
           const res = await api.get('/auth/me');
-          finalizeUserSession(res.data.user, res.data.guilds);
+          finalizeUserSession(res.data.user, res.data.guilds, res.data.allowedGuilds, res.data.contactUser);
         } catch (err: any) {
           console.error('Failed to validate url token:', err);
           if (err?.response?.status === 401 || err?.response?.status === 403) {
@@ -92,10 +119,10 @@ export function App() {
       } else if (code) {
         try {
           const callbackRes = await api.post('/auth/callback', { code });
-          const { token: receivedToken, user: receivedUser, guilds: receivedGuilds } = callbackRes.data;
+          const { token: receivedToken, user: receivedUser, guilds: receivedGuilds, allowedGuilds: receivedAllowed, contactUser: receivedContact } = callbackRes.data;
           if (receivedToken) {
             saveSavedToken(receivedToken);
-            finalizeUserSession(receivedUser, receivedGuilds);
+            finalizeUserSession(receivedUser, receivedGuilds, receivedAllowed, receivedContact);
           }
         } catch (err) {
           console.error('Failed to exchange code:', err);
@@ -123,6 +150,12 @@ export function App() {
     if (!selectedGuild) return;
 
     const fetchGuildData = async () => {
+      // If server is not whitelisted, skip fetching guild data and show RestrictedServerView
+      if (selectedGuild.id !== 'global' && selectedGuild.isAllowed === false) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         const [cardsRes, settingsRes, channelsRes] = await Promise.all([
@@ -452,6 +485,14 @@ export function App() {
             <div style={{ fontSize: '2rem', animation: 'spin 1s infinite' }}>🌙</div>
             <p style={{ marginTop: '0.75rem', color: 'var(--text-dark-secondary)', fontStyle: 'italic' }}>Loading server data...</p>
           </div>
+        ) : selectedGuild.id !== 'global' && selectedGuild.isAllowed === false ? (
+          <RestrictedServerView
+            selectedGuild={selectedGuild}
+            allowedGuilds={allowedGuilds}
+            contactUser={contactUser}
+            userGuilds={guilds}
+            onSelectGuild={handleSelectGuild}
+          />
         ) : (
           <>
             {selectedGuild.id !== 'global' && !selectedGuild.hasBot && (

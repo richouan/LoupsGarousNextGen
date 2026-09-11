@@ -1,12 +1,38 @@
 import { Interaction } from 'discord.js';
-import { buildCardEmbed, buildSecretRevealRow } from '../utils/embedBuilder';
+import { buildCardEmbed, buildSecretRevealRow, buildRestrictedServerEmbed } from '../utils/embedBuilder';
 import { MatchableCard } from '../services/CardMatcherService';
+import { isGuildAllowed, getResolvedAllowedGuilds, getContactUser } from '../utils/allowedGuilds';
 
 export async function handleInteraction(
   interaction: Interaction,
   getCardById: (cardId: string) => Promise<MatchableCard | null>,
   getAllCardsForGuild: (guildId: string | null) => Promise<MatchableCard[]>
 ): Promise<void> {
+  // Check if interaction is executed in an authorized server
+  if (interaction.guildId && !isGuildAllowed(interaction.guildId)) {
+    if (interaction.isAutocomplete()) {
+      await interaction.respond([
+        {
+          name: `🔒 Bot en développement - Contactez ${getContactUser()}`,
+          value: 'restricted'
+        }
+      ]);
+      return;
+    }
+
+    const allowedGuilds = getResolvedAllowedGuilds(interaction.client);
+    const { embed, files } = buildRestrictedServerEmbed(allowedGuilds, getContactUser());
+
+    if (interaction.isRepliable()) {
+      await interaction.reply({
+        embeds: [embed],
+        files,
+        ephemeral: false
+      });
+    }
+    return;
+  }
+
   // 0. Handle Autocomplete for Slash Commands
   if (interaction.isAutocomplete()) {
     const { commandName } = interaction;

@@ -7,6 +7,8 @@ import { chatControlService } from './services/ChatControlService';
 import { handleInteraction } from './events/interactionCreate';
 import { MatchableCard } from './services/CardMatcherService';
 import { deployCommands } from './scripts/deployCommands';
+import { isGuildAllowed, getResolvedAllowedGuilds, getContactUser } from './utils/allowedGuilds';
+import { buildRestrictedServerEmbed } from './utils/embedBuilder';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -118,7 +120,27 @@ export function createBotClient() {
         { guilds: [{ id: guild.id, name: guild.name, icon: guild.iconURL() }] },
         { timeout: 3000 }
       );
-      console.log(`🐺 Bot added to new server: ${guild.name} (${guild.id})`);
+      console.log(`🐺 Bot added to server: ${guild.name} (${guild.id})`);
+
+      // Check if the joined server is whitelisted
+      if (!isGuildAllowed(guild.id)) {
+        console.log(`ℹ️ [Bot] Joined unauthorized server: ${guild.name} (${guild.id}). Sending private beta notice.`);
+        try {
+          const defaultChannel =
+            guild.systemChannel ||
+            guild.channels.cache.find(
+              (c) => c.isTextBased() && c.permissionsFor(guild.members.me!)?.has('SendMessages')
+            );
+          if (defaultChannel && defaultChannel.isTextBased()) {
+            const allowedGuilds = getResolvedAllowedGuilds(client);
+            const { embed, files } = buildRestrictedServerEmbed(allowedGuilds, getContactUser());
+            await (defaultChannel as any).send({ embeds: [embed], files });
+          }
+        } catch (err: any) {
+          console.warn(`[Bot] Could not send welcome notice to ${guild.name}:`, err.message);
+        }
+        return;
+      }
 
       const botToken = process.env.DISCORD_BOT_TOKEN;
       const clientId = process.env.DISCORD_CLIENT_ID;
