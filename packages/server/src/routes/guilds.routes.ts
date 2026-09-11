@@ -3,9 +3,9 @@ import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import prisma from '../db/prisma';
 import { isGuildAllowed, getAllowedGuildsDetails, getContactUser, isSuperAdminUser } from '../utils/allowedGuilds';
+import { getJwtSecret } from '../utils/jwtSecret';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'loup-garou-secret-key-2026';
 const getBotToken = () => process.env.DISCORD_BOT_TOKEN || '';
 
 // Authentication Middleware
@@ -17,7 +17,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, getJwtSecret()) as any;
     (req as any).user = decoded.user;
     (req as any).guilds = decoded.guilds;
     return next();

@@ -11,10 +11,10 @@ Ce document regroupe les vulnérabilités identifiées sur l'application (**Serv
 | **SEC-01** | Contrôle d'accès brisé (IDOR) sur les paramètres serveurs | Backend (`guilds.routes.ts`) | 🔴 **CRITIQUE** | [x] **Corrigé** |
 | **SEC-02** | Endpoints internes du Bot non authentifiés (`sync-guilds`) | Backend (`bot.routes.ts`) | 🔴 **CRITIQUE** | [x] **Corrigé** |
 | **SEC-03** | CORS permissif en production (`callback(null, true)`) | Backend (`index.ts`) | 🟠 **HAUTE** | [x] **Corrigé** |
-| **SEC-04** | Absence de Rate Limiting (Uploads & Auth) | Backend (`upload.routes.ts`, `auth.routes.ts`) | 🟠 **HAUTE** | [ ] À corriger |
-| **SEC-05** | Clé de secours JWT codée en dur (Fallback Hardcoded Secret) | Backend (`auth.routes.ts`, `guilds.routes.ts`) | 🟡 **MOYENNE** | [ ] À corriger |
-| **SEC-06** | Absence d'en-têtes HTTP de sécurité (`helmet`) | Backend (`index.ts`) | 🟡 **MOYENNE** | [ ] À corriger |
-| **SEC-07** | Nettoyage / Validation des entrées d'upload Cloudinary | Backend (`upload.routes.ts`) | 🔵 **BASSE** | [ ] À corriger |
+| **SEC-04** | Absence de Rate Limiting (Uploads & Auth) | Backend (`upload.routes.ts`, `auth.routes.ts`) | 🟠 **HAUTE** | [x] **Corrigé** |
+| **SEC-05** | Clé de secours JWT codée en dur (Fallback Hardcoded Secret) | Backend (`auth.routes.ts`, `guilds.routes.ts`) | 🟡 **MOYENNE** | [x] **Corrigé** |
+| **SEC-06** | Absence d'en-têtes HTTP de sécurité (`helmet`) | Backend (`index.ts`) | 🟡 **MOYENNE** | [x] **Corrigé** |
+| **SEC-07** | Nettoyage / Validation des entrées d'upload Cloudinary | Backend (`upload.routes.ts`) | 🔵 **BASSE** | [x] **Corrigé** |
 
 ---
 

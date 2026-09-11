@@ -6,6 +6,8 @@ try { dotenv.config({ path: path.resolve(__dirname, '../../../.env') }); } catch
 
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes';
 import guildsRoutes from './routes/guilds.routes';
 import cardsRoutes from './routes/cards.routes';
@@ -14,6 +16,16 @@ import uploadRoutes from './routes/upload.routes';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Trust proxy for rate limiting behind Heroku load balancer
+app.set('trust proxy', 1);
+
+// SEC-06 FIX: Security Headers (Helmet)
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
 // Canonical redirect: www.loupgarou.online -> loupgarou.online
 app.use((req, res, next) => {
@@ -42,7 +54,18 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+
+// SEC-04 FIX: Global API Rate Limiter
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // 300 requests per IP per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes. Veuillez patienter avant de réessayer.' }
+});
+app.use('/api', apiLimiter);
+
+app.use(express.json({ limit: '1mb' }));
 
 // Serve uploads directory statically so frontend and Discord can access images
 app.use('/uploads', express.static(path.resolve(__dirname, '../../../../uploads')));

@@ -12,12 +12,23 @@ import {
   isSuperAdminUser
 } from '../utils/allowedGuilds';
 
+import rateLimit from 'express-rate-limit';
+import { getJwtSecret } from '../utils/jwtSecret';
+
 const router = Router();
 const getClientId = () => process.env.DISCORD_CLIENT_ID || '';
 const getClientSecret = () => process.env.DISCORD_CLIENT_SECRET || '';
 const getRedirectUri = () =>
   process.env.DISCORD_REDIRECT_URI || 'http://localhost:5173/auth/callback';
-const getJwtSecret = () => process.env.JWT_SECRET || 'loup-garou-secret-key-2026';
+
+// SEC-04 FIX: Rate limiter for OAuth callback to prevent token brute-forcing / spam
+const authCallbackLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.' }
+});
 
 /**
  * Initiates the Discord OAuth2 authorization flow
@@ -36,7 +47,7 @@ router.get('/discord', (_req: Request, res: Response) => {
 /**
  * Handles the OAuth2 callback from Discord
  */
-router.post('/callback', async (req: Request, res: Response) => {
+router.post('/callback', authCallbackLimiter, async (req: Request, res: Response) => {
   const { code } = req.body;
   if (!code) {
     return res.status(400).json({ error: 'Authorization code is required' });
