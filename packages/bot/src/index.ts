@@ -5,6 +5,7 @@ import axios from 'axios';
 import { autoReplyService } from './services/AutoReplyService';
 import { handleInteraction } from './events/interactionCreate';
 import { MatchableCard } from './services/CardMatcherService';
+import { deployCommands } from './scripts/deployCommands';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -97,6 +98,15 @@ export function createBotClient() {
     } catch (err: any) {
       console.warn(`[Bot] Could not sync guilds to server:`, err.message);
     }
+
+    // Automatically deploy slash commands globally and to all active guilds
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    const clientId = process.env.DISCORD_CLIENT_ID || c.user.id;
+    if (botToken && clientId) {
+      const activeGuildIds = c.guilds.cache.map((g) => g.id);
+      deployCommands(botToken, clientId, activeGuildIds)
+        .catch((err) => console.warn('[Bot] Failed to deploy slash commands on startup:', err.message));
+    }
   });
 
   // When bot joins a new server
@@ -108,6 +118,12 @@ export function createBotClient() {
         { timeout: 3000 }
       );
       console.log(`🐺 Bot added to new server: ${guild.name} (${guild.id})`);
+
+      const botToken = process.env.DISCORD_BOT_TOKEN;
+      const clientId = process.env.DISCORD_CLIENT_ID;
+      if (botToken && clientId) {
+        deployCommands(botToken, clientId, [guild.id]).catch(() => {});
+      }
     } catch {}
   });
 

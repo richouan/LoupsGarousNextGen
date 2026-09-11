@@ -167,9 +167,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 value={form.defaultReplyMode || 'BOTH'}
                 onChange={(e) => setForm({ ...form, defaultReplyMode: e.target.value })}
               >
-                <option value="BOTH">✨ Both (Rich embed + artwork)</option>
-                <option value="TEXT_ONLY">📜 Text Only (Rules, Powers)</option>
-                <option value="PHOTO_ONLY">🖼️ Artwork Only</option>
+                <option value="BOTH">✨ Embed (Text + Photo)</option>
+                <option value="TEXT_ONLY">📜 Embed (Text Only - no photo)</option>
+                <option value="PHOTO_ONLY">🖼️ Artwork Only (Image only)</option>
+                <option value="PLAIN_TEXT">💬 Plain Text (No embed)</option>
               </select>
             </div>
 

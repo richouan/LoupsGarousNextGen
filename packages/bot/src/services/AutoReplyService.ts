@@ -118,33 +118,41 @@ export class AutoReplyService {
   ): Promise<void> {
     let replyPromise;
 
-    if (replyMode === 'TEXT_ONLY') {
-      replyPromise = message.reply({
-        content: `**📜 ${card.name} (${card.camp})**\n${card.description}`
-      });
-    } else if (replyMode === 'PHOTO_ONLY' && card.imageUrl) {
-      replyPromise = message.reply({
-        content: `**🃏 ${card.name}**`,
-        files: [card.imageUrl]
-      });
-    } else {
-      // BOTH / Rich Embed + Artwork simultaneously in same message
+    if (replyMode === 'PHOTO_ONLY' && card.imageUrl) {
+      // 1. Artwork Only (image only, NO card name text)
+      replyPromise = message.channel.isTextBased()
+        ? (message.channel as any).send({ files: [card.imageUrl] })
+        : message.reply({ files: [card.imageUrl] });
+    } else if (replyMode === 'TEXT_ONLY' || replyMode === 'EMBED_TEXT') {
+      // 2. Embed Mode (Text Only - no photo)
       const requester = {
         username: message.author.displayName || message.author.username,
         avatarURL: message.author.displayAvatarURL()
       };
-      const { embed, files } = buildCardEmbed(card, false, requester);
-      const row = buildCardActionRow(card.id, card.name);
+      const { embed } = buildCardEmbed(card, false, requester, false);
+      replyPromise = message.channel.isTextBased()
+        ? (message.channel as any).send({ embeds: [embed] })
+        : message.reply({ embeds: [embed] });
+    } else if (replyMode === 'PLAIN_TEXT') {
+      // 3. Plain Text (No embed)
+      replyPromise = message.reply({
+        content: `**📜 ${card.name} (${card.camp})**\n${card.description}`
+      });
+    } else {
+      // 4. BOTH (Embed Mode: Text + Photo)
+      const requester = {
+        username: message.author.displayName || message.author.username,
+        avatarURL: message.author.displayAvatarURL()
+      };
+      const { embed, files } = buildCardEmbed(card, false, requester, true);
       replyPromise = message.channel.isTextBased()
         ? (message.channel as any).send({
             embeds: [embed],
-            files,
-            components: [row]
+            files
           })
         : message.reply({
             embeds: [embed],
-            files,
-            components: [row]
+            files
           });
     }
 
@@ -170,22 +178,26 @@ export class AutoReplyService {
     card: MatchableCard,
     replyMode: string
   ): Promise<void> {
-    if (replyMode === 'TEXT_ONLY') {
-      await message.author.send({
-        content: `**🔒 Révélation Secrète - ${card.name} (${card.camp})**\n${card.description}`
-      });
-    } else if (replyMode === 'PHOTO_ONLY' && card.imageUrl) {
-      await message.author.send({
-        content: `**🔒 Révélation Secrète - ${card.name}**`,
-        files: [card.imageUrl]
-      });
-    } else {
-      // BOTH / Rich Embed + Artwork simultaneously in same message
+    if (replyMode === 'PHOTO_ONLY' && card.imageUrl) {
+      await message.author.send({ files: [card.imageUrl] });
+    } else if (replyMode === 'TEXT_ONLY' || replyMode === 'EMBED_TEXT') {
       const requester = {
         username: message.author.displayName || message.author.username,
         avatarURL: message.author.displayAvatarURL()
       };
-      const { embed, files } = buildCardEmbed(card, true, requester);
+      const { embed } = buildCardEmbed(card, true, requester, false);
+      await message.author.send({ embeds: [embed] });
+    } else if (replyMode === 'PLAIN_TEXT') {
+      await message.author.send({
+        content: `**🔒 Révélation Secrète - ${card.name} (${card.camp})**\n${card.description}`
+      });
+    } else {
+      // BOTH (Embed Mode: Text + Photo)
+      const requester = {
+        username: message.author.displayName || message.author.username,
+        avatarURL: message.author.displayAvatarURL()
+      };
+      const { embed, files } = buildCardEmbed(card, true, requester, true);
       await message.author.send({
         embeds: [embed],
         files

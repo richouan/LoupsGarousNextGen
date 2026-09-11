@@ -27,23 +27,36 @@ export const commands = [
     .setDescription('Vérifie le temps de réponse du bot')
 ];
 
-export async function deployCommands(token: string, clientId: string, guildId?: string) {
+export async function deployCommands(token: string, clientId: string, guildIds?: string | string[]) {
   const rest = new REST({ version: '10' }).setToken(token);
 
   console.log(`[Deploy] Registering ${commands.length} application commands...`);
 
-  if (guildId) {
-    await rest.put(
-      Routes.applicationGuildCommands(clientId, guildId),
-      { body: commands.map((c) => c.toJSON()) }
-    );
-    console.log(`[Deploy] Commands registered to guild ${guildId}!`);
-  } else {
+  // 1. Global registration
+  try {
     await rest.put(
       Routes.applicationCommands(clientId),
       { body: commands.map((c) => c.toJSON()) }
     );
-    console.log('[Deploy] Global commands registered!');
+    console.log('[Deploy] Global slash commands registered successfully!');
+  } catch (err: any) {
+    console.warn('[Deploy] Global commands registration note:', err.message);
+  }
+
+  // 2. Guild-level registration for instantaneous availability
+  if (guildIds) {
+    const list = Array.isArray(guildIds) ? guildIds : [guildIds];
+    for (const gid of list) {
+      try {
+        await rest.put(
+          Routes.applicationGuildCommands(clientId, gid),
+          { body: commands.map((c) => c.toJSON()) }
+        );
+        console.log(`[Deploy] Commands registered to guild ${gid}!`);
+      } catch (err: any) {
+        console.warn(`[Deploy] Could not register to guild ${gid}:`, err.message);
+      }
+    }
   }
 }
 

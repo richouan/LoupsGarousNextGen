@@ -44,7 +44,8 @@ function toBoldLines(text: string): string {
 export function buildCardEmbed(
   card: MatchableCard,
   isEphemeral = false,
-  requester?: EmbedRequester
+  requester?: EmbedRequester,
+  includeImage = true
 ): { embed: EmbedBuilder; files: AttachmentBuilder[]; imageUrlContent?: string } {
   const color = CAMP_COLORS[card.camp] || 0x3b82f6;
   const campLabel = CAMP_NAMES[card.camp] || card.camp;
@@ -68,10 +69,13 @@ export function buildCardEmbed(
   }
 
   if (card.description && card.description.trim()) {
-    descriptionContent += `📜 **شرح مفصل :**\n${toBoldLines(card.description)}`;
+    descriptionContent += `📜 **شرح مفصل :**\n${toBoldLines(card.description)}\n\n`;
   }
 
-  descriptionContent = descriptionContent.trim();
+  // Free line between bio and the fields:
+  if (descriptionContent.trim()) {
+    descriptionContent = descriptionContent.trim() + '\n\u200B';
+  }
 
   const embed = new EmbedBuilder()
     .setTitle(card.name)
@@ -100,7 +104,7 @@ export function buildCardEmbed(
 
   const files: AttachmentBuilder[] = [];
 
-  if (card.imageUrl) {
+  if (includeImage && card.imageUrl) {
     const filename = card.imageUrl.split('/').pop()?.split('?')[0] || 'card.png';
     const attachment = new AttachmentBuilder(card.imageUrl, { name: filename });
     files.push(attachment);

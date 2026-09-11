@@ -26,12 +26,10 @@ export async function handleInteraction(
         avatarURL: interaction.user.displayAvatarURL()
       };
       const { embed, files } = buildCardEmbed(card, true, requester);
-      const row = buildSecretRevealRow(card.id, card.name);
 
       await interaction.reply({
         embeds: [embed],
         files,
-        components: [row],
         ephemeral: true
       });
       return;
@@ -66,12 +64,10 @@ export async function handleInteraction(
         avatarURL: interaction.user.displayAvatarURL()
       };
       const { embed, files } = buildCardEmbed(card, isSecret, requester);
-      const row = buildSecretRevealRow(card.id, card.name);
 
       await interaction.reply({
         embeds: [embed],
         files,
-        components: isSecret ? [] : [row],
         ephemeral: isSecret
       });
       return;
