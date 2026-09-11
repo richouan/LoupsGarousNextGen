@@ -66,9 +66,12 @@ export function App() {
           }
 
           finalizeUserSession(res.data.user, res.data.guilds);
-        } catch {
-          localStorage.removeItem('lg_auth_token');
-          window.location.href = '/api/auth/discord';
+        } catch (err: any) {
+          console.error('Session validation check failed:', err);
+          // Only clear session if token is explicitly expired or unauthorized (401 / 403)
+          if (err?.response?.status === 401 || err?.response?.status === 403) {
+            localStorage.removeItem('lg_auth_token');
+          }
         } finally {
           setAuthLoading(false);
         }
@@ -78,8 +81,11 @@ export function App() {
         try {
           const res = await api.get('/auth/me');
           finalizeUserSession(res.data.user, res.data.guilds);
-        } catch {
-          localStorage.removeItem('lg_auth_token');
+        } catch (err: any) {
+          console.error('Failed to validate url token:', err);
+          if (err?.response?.status === 401 || err?.response?.status === 403) {
+            localStorage.removeItem('lg_auth_token');
+          }
         } finally {
           setAuthLoading(false);
         }

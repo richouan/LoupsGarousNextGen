@@ -7,7 +7,7 @@ const router = Router();
 const getClientId = () => process.env.DISCORD_CLIENT_ID || '';
 const getClientSecret = () => process.env.DISCORD_CLIENT_SECRET || '';
 const getRedirectUri = () => process.env.DISCORD_REDIRECT_URI || 'http://localhost:5173/auth/callback';
-const getJwtSecret = () => process.env.JWT_SECRET || 'loup-garou-secret-key-v2';
+const getJwtSecret = () => process.env.JWT_SECRET || 'loup-garou-secret-key-2026';
 const getSuperAdminIds = () => (process.env.SUPER_ADMIN_IDS || '').split(',').map((id) => id.trim());
 
 /**
@@ -117,7 +117,7 @@ router.post('/callback', async (req: Request, res: Response) => {
     });
 
     // Generate session JWT (stores minimal profile + id)
-    const token = jwt.sign({ user, guilds }, getJwtSecret(), { expiresIn: '7d' });
+    const token = jwt.sign({ user, guilds }, getJwtSecret(), { expiresIn: '30d' });
 
     return res.json({ token, user, guilds });
   } catch (err: any) {
