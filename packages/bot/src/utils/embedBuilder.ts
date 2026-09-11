@@ -28,6 +28,19 @@ export interface EmbedRequester {
   avatarURL?: string;
 }
 
+function toBoldLines(text: string): string {
+  if (!text) return '';
+  return text
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return '';
+      if (trimmed.startsWith('**') && trimmed.endsWith('**')) return trimmed;
+      return `**${trimmed}**`;
+    })
+    .join('\n');
+}
+
 export function buildCardEmbed(
   card: MatchableCard,
   isEphemeral = false,
@@ -46,16 +59,16 @@ export function buildCardEmbed(
     : '❌ بدون';
 
   let descriptionContent =
-    `**المجموعة :** ${campLabel}\n` +
-    `**الصعوبة :** ${stars}\n` +
-    `**القدرة :** ${abilityLabel}`;
+    `**المجموعة :** **${campLabel}**\n` +
+    `**الصعوبة :** **${stars}**\n` +
+    `**القدرة :** **${abilityLabel}**`;
 
   if (card.shortDescription && card.shortDescription.trim()) {
-    descriptionContent += `\n\n⚡ **شرح مختصر :**\n${card.shortDescription.trim()}`;
+    descriptionContent += `\n\n⚡ **شرح مختصر :**\n${toBoldLines(card.shortDescription)}`;
   }
 
   if (card.description && card.description.trim()) {
-    descriptionContent += `\n\n📜 **شرح مفصل :**\n${card.description.trim()}`;
+    descriptionContent += `\n\n📜 **شرح مفصل :**\n${toBoldLines(card.description)}`;
   }
 
   const embed = new EmbedBuilder()
