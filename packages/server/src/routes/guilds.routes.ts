@@ -1,4 +1,4 @@
-import { Router, Request, Response, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import prisma from '../db/prisma';
@@ -9,11 +9,10 @@ const router = Router();
 const getBotToken = () => process.env.DISCORD_BOT_TOKEN || '';
 
 // Authentication Middleware
-export const authenticate: RequestHandler = (req, res, next) => {
+export function authenticate(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'No token provided' });
-    return;
+    return res.status(401).json({ error: 'No token provided' });
   }
 
   const token = authHeader.split(' ')[1];
@@ -21,51 +20,50 @@ export const authenticate: RequestHandler = (req, res, next) => {
     const decoded = jwt.verify(token, getJwtSecret()) as any;
     (req as any).user = decoded.user;
     (req as any).guilds = decoded.guilds;
-    next();
+    return next();
   } catch {
-    res.status(401).json({ error: 'Invalid or expired token' });
-    return;
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
-};
+}
 
 /**
  * SEC-01 FIX: Authorization middleware to prevent IDOR attacks.
  * Verifies that the authenticated user is the Owner or Administrator of :guildId.
  * Super Admins and Root Devs have global bypass rights.
  */
-export const requireGuildAdmin: RequestHandler = async (req, res, next) => {
+export async function requireGuildAdmin(req: Request, res: Response, next: NextFunction) {
   const { guildId } = req.params;
   const user = (req as any).user;
   const userGuilds = (req as any).guilds || [];
 
   if (!user) {
-    res.status(401).json({ error: 'Unauthorized: User not authenticated' });
-    return;
+    return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
   }
 
   // Super Admins & Root Devs have global privileges
   if (user.isSuperAdmin || user.isDev || (await isSuperAdminUser(user.id))) {
-    next();
-    return;
+    return next();
   }
 
   if (guildId === 'global') {
-    res.status(403).json({ error: 'FORBIDDEN', message: 'Accès Super Admin requis pour les ressources globales.' });
-    return;
+    return res.status(403).json({ error: 'FORBIDDEN', message: 'Accès Super Admin requis pour les ressources globales.' });
   }
 
   // Check if user owns or administrates this guild
   const matchedGuild = userGuilds.find((g: any) => g.id === guildId);
   if (!matchedGuild || (!matchedGuild.owner && !matchedGuild.isAdmin)) {
-    res.status(403).json({
+    return res.status(403).json({
       error: 'FORBIDDEN',
       message: 'Vous devez être propriétaire ou administrateur de ce serveur Discord pour effectuer cette action.'
     });
-    return;
   }
 
-  next();
-};
+  return next();
+}
+
+// 60-second in-memory cache for Discord channels to speed up dashboard loads and avoid hitting Discord API rate limits
+const channelsCache = new Map<string, { data: any[]; timestamp: number }>();
+const CHANNELS_CACHE_TTL = 60 * 1000;
 
 /**
  * Get channels & categories for a guild directly from Discord API
@@ -76,6 +74,12 @@ router.get('/:guildId/channels', authenticate, requireGuildAdmin, async (req: Re
 
   if (guildId === 'global') {
     return res.json([]);
+  }
+
+  // Return cached channels if still fresh
+  const cached = channelsCache.get(guildId);
+  if (cached && Date.now() - cached.timestamp < CHANNELS_CACHE_TTL) {
+    return res.json(cached.data);
   }
 
   if (!botToken) {
@@ -103,6 +107,9 @@ router.get('/:guildId/channels', authenticate, requireGuildAdmin, async (req: Re
         position: c.position
       }))
       .sort((a, b) => (a.position || 0) - (b.position || 0));
+
+    // Store in cache
+    channelsCache.set(guildId, { data: formattedChannels, timestamp: Date.now() });
 
     console.log(`[Guilds] Formatted ${formattedChannels.length} channels for dashboard.`);
     return res.json(formattedChannels);

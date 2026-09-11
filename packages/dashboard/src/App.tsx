@@ -166,21 +166,35 @@ export function App() {
       }
 
       setLoading(true);
-      try {
-        const [cardsRes, settingsRes, channelsRes] = await Promise.all([
-          api.get('/cards'),
-          api.get(`/guilds/${selectedGuild.id}/settings`),
-          api.get(`/guilds/${selectedGuild.id}/channels`)
-        ]);
 
-        setCards(cardsRes.data);
-        setSettings(settingsRes.data);
-        setChannels(channelsRes.data);
-      } catch (err) {
-        console.error('Failed to load guild data:', err);
-      } finally {
-        setLoading(false);
-      }
+      // 1. Fetch core database data (cards & server settings) fast (< 50ms)
+      const fetchCore = async () => {
+        try {
+          const [cardsRes, settingsRes] = await Promise.all([
+            api.get('/cards'),
+            api.get(`/guilds/${selectedGuild.id}/settings`)
+          ]);
+          setCards(cardsRes.data);
+          setSettings(settingsRes.data);
+        } catch (err) {
+          console.error('Failed to load guild cards/settings:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      // 2. Fetch Discord channels concurrently in background without blocking the UI
+      const fetchChannels = async () => {
+        try {
+          const channelsRes = await api.get(`/guilds/${selectedGuild.id}/channels`);
+          setChannels(channelsRes.data);
+        } catch (err) {
+          console.error('Failed to load guild channels:', err);
+        }
+      };
+
+      fetchCore();
+      fetchChannels();
     };
 
     fetchGuildData();

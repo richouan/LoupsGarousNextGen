@@ -1,4 +1,4 @@
-import { Router, Request, Response, RequestHandler } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import prisma from '../db/prisma';
 import {
   getAllowedGuildIds,
@@ -19,29 +19,27 @@ const router = Router();
  * SEC-02 FIX: Require internal bot secret authentication.
  * Protects server-to-bot endpoints against unauthorized external requests.
  */
-export const requireBotAuth: RequestHandler = (req, res, next) => {
+export function requireBotAuth(req: Request, res: Response, next: NextFunction) {
   const secretHeader = req.headers['x-bot-secret'] || req.headers['authorization'];
   const expectedSecret = process.env.INTERNAL_BOT_SECRET || process.env.DISCORD_BOT_TOKEN;
 
   if (!expectedSecret) {
     console.warn('[Security Warning] No INTERNAL_BOT_SECRET or DISCORD_BOT_TOKEN configured on server');
-    res.status(500).json({ error: 'Server misconfiguration: Bot authentication secret missing' });
-    return;
+    return res.status(500).json({ error: 'Server misconfiguration: Bot authentication secret missing' });
   }
 
   const token = typeof secretHeader === 'string' && secretHeader.startsWith('Bearer ')
     ? secretHeader.slice(7).trim()
     : typeof secretHeader === 'string' && secretHeader.startsWith('Bot ')
-    ? secretHeader.slice(4).trim()
-    : secretHeader;
+      ? secretHeader.slice(4).trim()
+      : secretHeader;
 
   if (!token || token !== expectedSecret) {
-    res.status(403).json({ error: 'Forbidden: Invalid or missing bot authentication secret' });
-    return;
+    return res.status(403).json({ error: 'Forbidden: Invalid or missing bot authentication secret' });
   }
 
-  next();
-};
+  return next();
+}
 
 /**
  * Public endpoint to retrieve allowed servers and development contact info
@@ -226,25 +224,25 @@ router.get('/guild-config/:guildId', requireBotAuth, async (req: Request, res: R
 
     const parsedSettings = setting
       ? {
-          ...setting,
-          allowedChannelIds: JSON.parse(setting.allowedChannelIds || '[]'),
-          allowedCategoryIds: JSON.parse(setting.allowedCategoryIds || '[]'),
-          ignoredChannelIds: JSON.parse(setting.ignoredChannelIds || '[]')
-        }
+        ...setting,
+        allowedChannelIds: JSON.parse(setting.allowedChannelIds || '[]'),
+        allowedCategoryIds: JSON.parse(setting.allowedCategoryIds || '[]'),
+        ignoredChannelIds: JSON.parse(setting.ignoredChannelIds || '[]')
+      }
       : {
-          guildId,
-          prefix: '!',
-          autoReplyEnabled: true,
-          defaultReplyMode: 'BOTH',
-          deliveryMethod: 'PUBLIC',
-          allowedChannelIds: [],
-          allowedCategoryIds: [],
-          ignoredChannelIds: [],
-          userCooldownSeconds: 3,
-          channelCooldownSeconds: 1,
-          autoDeleteSeconds: 0,
-          allowDms: true
-        };
+        guildId,
+        prefix: '!',
+        autoReplyEnabled: true,
+        defaultReplyMode: 'BOTH',
+        deliveryMethod: 'PUBLIC',
+        allowedChannelIds: [],
+        allowedCategoryIds: [],
+        ignoredChannelIds: [],
+        userCooldownSeconds: 3,
+        channelCooldownSeconds: 1,
+        autoDeleteSeconds: 0,
+        allowDms: true
+      };
 
     return res.json({
       settings: parsedSettings,
@@ -334,7 +332,7 @@ router.get('/card/:cardId', async (req: Request, res: Response) => {
  * Simulates how the bot would handle a chat message
  */
 router.post('/simulate-reply', async (req: Request, res: Response) => {
-  const { guildId, channelId, categoryId, messageContent } = req.body;
+  const { guildId, channelId, categoryId, messageContent, userId } = req.body;
 
   if (!messageContent) {
     return res.status(400).json({ error: 'Message content is required' });
@@ -351,23 +349,23 @@ router.post('/simulate-reply', async (req: Request, res: Response) => {
 
   const parsedSetting = setting
     ? {
-        ...setting,
-        allowedChannelIds: JSON.parse(setting.allowedChannelIds || '[]'),
-        allowedCategoryIds: JSON.parse(setting.allowedCategoryIds || '[]'),
-        ignoredChannelIds: JSON.parse(setting.ignoredChannelIds || '[]')
-      }
+      ...setting,
+      allowedChannelIds: JSON.parse(setting.allowedChannelIds || '[]'),
+      allowedCategoryIds: JSON.parse(setting.allowedCategoryIds || '[]'),
+      ignoredChannelIds: JSON.parse(setting.ignoredChannelIds || '[]')
+    }
     : {
-        autoReplyEnabled: true,
-        defaultReplyMode: 'BOTH',
-        deliveryMethod: 'PUBLIC',
-        allowedChannelIds: [],
-        allowedCategoryIds: [],
-        ignoredChannelIds: [],
-        userCooldownSeconds: 3,
-        channelCooldownSeconds: 1,
-        autoDeleteSeconds: 0,
-        allowDms: true
-      };
+      autoReplyEnabled: true,
+      defaultReplyMode: 'BOTH',
+      deliveryMethod: 'PUBLIC',
+      allowedChannelIds: [],
+      allowedCategoryIds: [],
+      ignoredChannelIds: [],
+      userCooldownSeconds: 3,
+      channelCooldownSeconds: 1,
+      autoDeleteSeconds: 0,
+      allowDms: true
+    };
 
   // 2. Channel & Category Check
   const ignored = parsedSetting.ignoredChannelIds.includes(channelId);
