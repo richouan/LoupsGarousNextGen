@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Sparkles, Image as ImageIcon, Shield, PawPrint, Eye, Moon, Sun, Crown, Copy, Edit3, Trash2 } from 'lucide-react';
+import { getOptimizedImageUrl } from '../utils/imageUtils';
 
 interface CardEditorProps {
   onClose: () => void;
@@ -270,7 +271,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                 />
               </label>
               {imageUrl ? (
-                <img key={imageUrl} src={imageUrl} alt="Preview" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+                <img key={imageUrl} src={getOptimizedImageUrl(imageUrl, 'preview')} alt="Preview" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
               ) : (
                 <div className="placeholder-image">🐺</div>
               )}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Eye } from 'lucide-react';
+import { getOptimizedImageUrl } from '../utils/imageUtils';
 
 interface DiscordEmbedPreviewProps {
   card: {
@@ -113,7 +114,7 @@ export const DiscordEmbedPreview: React.FC<DiscordEmbedPreviewProps> = ({
               </div>
               {card.imageUrl && (
                 <img
-                  src={card.imageUrl}
+                  src={getOptimizedImageUrl(card.imageUrl, 'medium')}
                   alt={card.name}
                   style={{
                     maxWidth: '100%',
@@ -167,7 +168,7 @@ export const DiscordEmbedPreview: React.FC<DiscordEmbedPreviewProps> = ({
               {card.imageUrl && (
                 <div style={{ marginTop: '0.75rem' }}>
                   <img
-                    src={card.imageUrl}
+                    src={getOptimizedImageUrl(card.imageUrl, 'medium')}
                     alt={card.name}
                     style={{
                       width: '100%',

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { CardEditor } from '../components/CardEditor';
 import { DiscordEmbedPreview } from '../components/DiscordEmbedPreview';
+import { getOptimizedImageUrl } from '../utils/imageUtils';
 
 interface CardsTabProps {
   cards: any[];
@@ -310,7 +311,12 @@ export const CardsTab: React.FC<CardsTabProps> = ({
               {/* Artwork */}
               <div className="card-art">
                 {card.imageUrl ? (
-                  <img src={card.imageUrl} alt={card.name} />
+                  <img
+                    src={getOptimizedImageUrl(card.imageUrl, 'thumb')}
+                    alt={card.name}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ) : (
                   <div className="card-art-placeholder">
                     {campEmoji[card.camp] || '🐺'}
@@ -361,7 +367,12 @@ export const CardsTab: React.FC<CardsTabProps> = ({
             >
               <div className="card-banner-med" style={{ position: 'relative' }}>
                 {card.imageUrl ? (
-                  <img src={card.imageUrl} alt={card.name} />
+                  <img
+                    src={getOptimizedImageUrl(card.imageUrl, 'medium')}
+                    alt={card.name}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ) : (
                   <div
                     style={{
