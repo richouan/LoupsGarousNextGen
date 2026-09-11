@@ -128,23 +128,17 @@ export class AutoReplyService {
         files: [card.imageUrl]
       });
     } else {
-      // BOTH / Rich Embed
+      // BOTH / Rich Embed + Artwork simultaneously in same message
       const { embed, files } = buildCardEmbed(card, false);
-      const replyPromise = message.channel.isTextBased() ? (message.channel as any).send({
-        embeds: [embed]
-      }) : message.reply({
-        embeds: [embed]
-      });
-
-      if (files.length > 0) {
-        replyPromise.then(() => {
-          if (message.channel.isTextBased()) {
-            (message.channel as any).send({
-              files
-            }).catch(console.error);
-          }
-        });
-      }
+      replyPromise = message.channel.isTextBased()
+        ? (message.channel as any).send({
+            embeds: [embed],
+            files
+          })
+        : message.reply({
+            embeds: [embed],
+            files
+          });
     }
 
     const sentMessage = await replyPromise;
@@ -169,8 +163,6 @@ export class AutoReplyService {
     card: MatchableCard,
     replyMode: string
   ): Promise<void> {
-    const { embed: defaultEmbed } = buildCardEmbed(card, true);
-
     if (replyMode === 'TEXT_ONLY') {
       await message.author.send({
         content: `**🔒 Révélation Secrète - ${card.name} (${card.camp})**\n${card.description}`
@@ -181,19 +173,12 @@ export class AutoReplyService {
         files: [card.imageUrl]
       });
     } else {
-      // BOTH / Rich Embed
+      // BOTH / Rich Embed + Artwork simultaneously in same message
       const { embed, files } = buildCardEmbed(card, true);
-      const replyPromise = message.author.send({
-        embeds: [embed]
+      await message.author.send({
+        embeds: [embed],
+        files
       });
-
-      if (files.length > 0) {
-        replyPromise.then(() => {
-          message.author.send({
-            files
-          }).catch(console.error);
-        });
-      }
     }
 
     // Add confirmation emoji if not already in DM

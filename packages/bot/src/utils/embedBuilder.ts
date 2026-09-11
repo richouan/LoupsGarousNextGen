@@ -56,11 +56,10 @@ export function buildCardEmbed(card: MatchableCard, isEphemeral = false): { embe
   const files: AttachmentBuilder[] = [];
 
   if (card.imageUrl) {
-    // All URLs (Cloudinary, Discord CDN, etc) are streamed directly as native attachments
-    // to bypass the Discord link-preview max-width limit and render them as massive file uploads.
     const filename = card.imageUrl.split('/').pop()?.split('?')[0] || 'card.png';
     const attachment = new AttachmentBuilder(card.imageUrl, { name: filename });
     files.push(attachment);
+    embed.setImage(`attachment://${filename}`);
   }
 
   return { embed, files };

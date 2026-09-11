@@ -26,16 +26,10 @@ export async function handleInteraction(
 
       await interaction.reply({
         embeds: [embed],
+        files,
         components: [row],
         ephemeral: true
       });
-
-      if (files.length > 0) {
-        await interaction.followUp({
-          files,
-          ephemeral: true
-        });
-      }
       return;
     }
   }
@@ -67,15 +61,9 @@ export async function handleInteraction(
 
       await interaction.reply({
         embeds: [embed],
+        files,
         ephemeral: isSecret
       });
-
-      if (files.length > 0) {
-        await interaction.followUp({
-          files,
-          ephemeral: isSecret
-        });
-      }
       return;
     }
 
