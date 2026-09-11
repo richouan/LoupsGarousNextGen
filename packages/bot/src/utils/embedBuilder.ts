@@ -58,22 +58,30 @@ export function buildCardEmbed(
     ? '✨ دائمة'
     : '❌ بدون';
 
-  let descriptionContent =
-    `**المجموعة :** **${campLabel}**\n` +
-    `**الصعوبة :** **${stars}**\n` +
-    `**القدرة :** **${abilityLabel}**`;
+  let descriptionContent = '';
 
   if (card.shortDescription && card.shortDescription.trim()) {
-    descriptionContent += `\n\n⚡ **شرح مختصر :**\n${toBoldLines(card.shortDescription)}`;
+    descriptionContent += `⚡ **شرح مختصر :**\n${toBoldLines(card.shortDescription)}\n\n`;
   }
 
   if (card.description && card.description.trim()) {
-    descriptionContent += `\n\n📜 **شرح مفصل :**\n${toBoldLines(card.description)}`;
+    descriptionContent += `📜 **شرح مفصل :**\n${toBoldLines(card.description)}\n\n`;
   }
 
+  descriptionContent += `-# 💡 اكتب اسم أي دور في المحادثة لعرض تفاصيله فوراً`;
+
   const embed = new EmbedBuilder()
+    .setAuthor({
+      name: 'Loups-Garous NextGen • بطاقة دور',
+      iconURL: 'https://loupgarou.online/logo.png'
+    })
     .setTitle(`🃏 ${card.name}`)
     .setColor(color)
+    .addFields(
+      { name: '🛡️ المجموعة', value: `**${campLabel}**`, inline: true },
+      { name: '⭐ الصعوبة', value: `**${stars}**`, inline: true },
+      { name: '⏳ القدرة', value: `**${abilityLabel}**`, inline: true }
+    )
     .setDescription(descriptionContent);
 
   if (requester?.username) {
@@ -100,11 +108,31 @@ export function buildCardEmbed(
   return { embed, files };
 }
 
+export function buildCardActionRow(cardId: string, cardName: string): ActionRowBuilder<ButtonBuilder> {
+  const revealBtn = new ButtonBuilder()
+    .setCustomId(`reveal_card:${cardId}`)
+    .setLabel(`👁️ كشف بالسر`)
+    .setStyle(ButtonStyle.Secondary);
+
+  const siteBtn = new ButtonBuilder()
+    .setLabel(`🌐 لوحة التحكم`)
+    .setStyle(ButtonStyle.Link)
+    .setURL(`https://loupgarou.online`);
+
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(revealBtn, siteBtn);
+}
+
 export function buildSecretRevealRow(cardId: string, cardName: string): ActionRowBuilder<ButtonBuilder> {
   const button = new ButtonBuilder()
     .setCustomId(`reveal_card:${cardId}`)
-    .setLabel(`👁️ Révéler "${cardName}" en secret`)
+    .setLabel(`👁️ كشف بالسر`)
     .setStyle(ButtonStyle.Secondary);
 
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(button);
+  const siteButton = new ButtonBuilder()
+    .setLabel(`🌐 لوحة التحكم`)
+    .setStyle(ButtonStyle.Link)
+    .setURL(`https://loupgarou.online`);
+
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(button, siteButton);
 }
+

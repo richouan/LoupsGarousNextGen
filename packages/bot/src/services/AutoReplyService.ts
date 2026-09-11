@@ -2,7 +2,7 @@ import { Message, TextChannel } from 'discord.js';
 import { cardMatcherService, MatchableCard } from './CardMatcherService';
 import { channelFilterService, ChannelFilterOptions } from './ChannelFilterService';
 import { rateLimiterService } from './RateLimiterService';
-import { buildCardEmbed, buildSecretRevealRow } from '../utils/embedBuilder';
+import { buildCardEmbed, buildCardActionRow, buildSecretRevealRow } from '../utils/embedBuilder';
 
 export interface GuildConfigWithCards {
   settings: {
@@ -134,14 +134,17 @@ export class AutoReplyService {
         avatarURL: message.author.displayAvatarURL()
       };
       const { embed, files } = buildCardEmbed(card, false, requester);
+      const row = buildCardActionRow(card.id, card.name);
       replyPromise = message.channel.isTextBased()
         ? (message.channel as any).send({
             embeds: [embed],
-            files
+            files,
+            components: [row]
           })
         : message.reply({
             embeds: [embed],
-            files
+            files,
+            components: [row]
           });
     }
 
