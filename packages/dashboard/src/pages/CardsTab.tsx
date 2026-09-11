@@ -82,17 +82,22 @@ export const CardsTab: React.FC<CardsTabProps> = ({
     return result;
   }, [cards, search, campFilter, sortBy]);
 
-  // Progressive row reveal (3-4 rows initial, more revealed as user scrolls)
-  const initialBatch = viewMode === 'compact' ? 18 : 10;
+  // Progressive row reveal (2 rows initial, more revealed as user scrolls or emerges from fog)
+  const initialBatch = viewMode === 'compact' ? 8 : 4;
   const [visibleCount, setVisibleCount] = useState(initialBatch);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Reset count whenever filters or viewMode change
   useEffect(() => {
-    setVisibleCount(viewMode === 'compact' ? 18 : 10);
+    setVisibleCount(viewMode === 'compact' ? 8 : 4);
   }, [search, campFilter, sortBy, viewMode]);
 
-  // Observer to reveal more roles when scrolling near the bottom
+  const handleRevealMore = () => {
+    const step = viewMode === 'compact' ? 6 : 4;
+    setVisibleCount((prev) => Math.min(prev + step, filteredCards.length));
+  };
+
+  // Observer to reveal more roles when scrolling near the bottom fog
   useEffect(() => {
     if (visibleCount >= filteredCards.length) return;
 
@@ -103,12 +108,11 @@ export const CardsTab: React.FC<CardsTabProps> = ({
       (entries) => {
         const [entry] = entries;
         if (entry.isIntersecting) {
-          const step = viewMode === 'compact' ? 12 : 6;
-          setVisibleCount((prev) => Math.min(prev + step, filteredCards.length));
+          handleRevealMore();
         }
       },
       {
-        rootMargin: '300px 0px',
+        rootMargin: '100px 0px',
         threshold: 0.05
       }
     );
@@ -468,14 +472,21 @@ export const CardsTab: React.FC<CardsTabProps> = ({
         </div>
       )}
 
-      {/* Sentinel for progressive scroll loading */}
+      {/* Mystical Fog Overlay & Progressive Scroll Trigger */}
       {visibleCount < filteredCards.length && (
-        <div ref={sentinelRef} className="cards-scroll-sentinel">
-          <svg className="lazy-circular-spinner" viewBox="0 0 50 50" style={{ width: '26px', height: '26px' }}>
-            <circle className="lazy-spinner-track" cx="25" cy="25" r="18" fill="none" strokeWidth="3.5" />
-            <circle className="lazy-spinner-path" cx="25" cy="25" r="18" fill="none" strokeWidth="3.5" />
-          </svg>
-          <span>Défilez pour afficher plus de rôles...</span>
+        <div className="cards-fog-overlay" onClick={handleRevealMore}>
+          <div className="cards-fog-mist-layer" />
+          <div ref={sentinelRef} className="cards-fog-content">
+            <div className="cards-fog-pill">
+              <svg className="lazy-circular-spinner" viewBox="0 0 50 50" style={{ width: '22px', height: '22px' }}>
+                <circle className="lazy-spinner-track" cx="25" cy="25" r="18" fill="none" strokeWidth="3.5" />
+                <circle className="lazy-spinner-path" cx="25" cy="25" r="18" fill="none" strokeWidth="3.5" />
+              </svg>
+              <span>
+                Défilez pour dissiper la brume 🌫️ <strong style={{ color: 'var(--gold)' }}>+{filteredCards.length - visibleCount}</strong> rôles cachés
+              </span>
+            </div>
+          </div>
         </div>
       )}
 

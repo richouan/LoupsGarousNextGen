@@ -477,15 +477,79 @@ li {
   margin-top: 1.5rem;
 }
 
-.cards-scroll-sentinel {
+/* ====== MYSTICAL FOG OVERLAY & PROGRESSIVE REVEAL ====== */
+.cards-fog-overlay {
+  position: relative;
+  margin-top: -140px;
+  height: 220px;
+  z-index: 25;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(10, 10, 14, 0.4) 20%,
+    rgba(10, 10, 14, 0.85) 60%,
+    var(--bg-dark, #0a0a0e) 95%
+  );
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
+  padding-bottom: 2rem;
+  cursor: pointer;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.cards-fog-mist-layer {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 100%, rgba(168, 85, 247, 0.15) 0%, rgba(212, 175, 55, 0.08) 45%, transparent 75%);
+  pointer-events: none;
+  animation: mistPulse 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes mistPulse {
+  0% {
+    opacity: 0.5;
+    transform: scaleY(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1.08);
+  }
+}
+
+.cards-fog-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cards-fog-pill {
+  display: inline-flex;
+  align-items: center;
   gap: 0.75rem;
-  padding: 2.5rem 1rem 2rem;
+  padding: 0.65rem 1.5rem;
+  background: rgba(18, 18, 24, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 9999px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.15);
   font-family: var(--font-body);
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-cream);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.cards-fog-overlay:hover .cards-fog-pill {
+  background: rgba(26, 26, 36, 0.98);
+  border-color: var(--gold);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), 0 0 25px rgba(212, 175, 55, 0.3);
 }
 
 /* ====== COMPACT ROLE CARD ====== */
@@ -499,6 +563,24 @@ li {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+  animation: emergeFromFog 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.role-card-medium {
+  animation: emergeFromFog 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes emergeFromFog {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(22px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
 }
 
 .role-card-compact:hover {
