@@ -1511,18 +1511,19 @@ li {
 }
 
 @media (max-width: 768px) {
-  /* Sticky top action bar on mobile so virtual keyboard never obstructs or covers writing */
+  /* Sticky top action bar on mobile with clean breathing room */
   .card-editor-header {
     position: sticky;
-    top: 58px; /* Docks right under the sticky navbar */
+    top: 68px; /* Clean floating gap beneath the sticky navbar */
     z-index: 90;
-    background: rgba(10, 10, 14, 0.96);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 0.6rem 0.75rem;
-    margin: -1rem -1rem 1rem -1rem;
-    border-bottom: 1px solid var(--border-gold-dim);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    background: rgba(14, 16, 23, 0.96);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 0.65rem 0.9rem;
+    margin: 0.75rem 0 1.25rem 0; /* Clean gap at top and bottom */
+    border: 1px solid var(--border-gold-dim);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
   }
 
   .editor-back-btn span {
