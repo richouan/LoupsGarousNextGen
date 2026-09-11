@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Hash, Folder, ShieldCheck, MessageSquare } from 'lucide-react';
+import { Hash, Folder, ShieldCheck, MessageSquare, Server, PlusCircle } from 'lucide-react';
 
 interface SettingsTabProps {
   settings: any;
   channels: any[];
   onSaveSettings: (updated: any) => Promise<void>;
   selectedGuildName: string;
+  selectedGuildId?: string;
+  onGoHome?: () => void;
 }
 
 const ToggleSetting = ({ icon: Icon, title, description, checked, onChange, danger = false }: any) => (
@@ -30,7 +32,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   settings,
   channels,
   onSaveSettings,
-  selectedGuildName
+  selectedGuildName,
+  selectedGuildId,
+  onGoHome
 }) => {
   const [form, setForm] = useState<any>({ ...settings });
   const [saving, setSaving] = useState(false);
@@ -38,6 +42,83 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   useEffect(() => {
     setForm({ ...settings });
   }, [settings]);
+
+  const isGlobalMode = selectedGuildId === 'global' || selectedGuildName === 'Global Role Management';
+
+  if (isGlobalMode) {
+    return (
+      <div style={{ animation: 'fadeIn 0.3s ease', padding: '2rem 1rem' }}>
+        <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+          <h1 style={{ marginBottom: '0.35rem' }}>Channels & Behavior</h1>
+          <p style={{ color: 'var(--text-dark-secondary)', fontSize: '0.95rem' }}>
+            Configure where and how the bot listens on your Discord servers.
+          </p>
+        </div>
+
+        <div
+          className="glass-panel"
+          style={{
+            maxWidth: '560px',
+            margin: '0 auto',
+            padding: '3rem 2rem',
+            textAlign: 'center',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border-gold-dim)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+          }}
+        >
+          <div
+            style={{
+              width: '72px',
+              height: '72px',
+              borderRadius: '50%',
+              background: 'rgba(234, 179, 8, 0.12)',
+              border: '1px solid rgba(234, 179, 8, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.5rem',
+              boxShadow: '0 0 28px rgba(234, 179, 8, 0.2)'
+            }}
+          >
+            <Server size={34} color="var(--gold)" />
+          </div>
+
+          <h2
+            className="fantasy-font"
+            style={{ fontSize: '1.4rem', color: 'var(--text-cream)', marginBottom: '0.75rem', letterSpacing: '0.03em' }}
+          >
+            Configuration Réservée aux Serveurs
+          </h2>
+
+          <p style={{ color: 'var(--text-light-muted)', fontSize: '0.92rem', lineHeight: '1.6', marginBottom: '1.75rem' }}>
+            Cet onglet est uniquement accessible lorsque vous êtes dans un serveur Discord. 
+            Le mode <strong>👑 Bibliothèque Globale</strong> gère uniquement les cartes et règles globales.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
+            <button
+              type="button"
+              className="btn btn-gold"
+              onClick={onGoHome}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                padding: '0.75rem 1.6rem',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                boxShadow: '0 4px 20px rgba(234, 179, 8, 0.3)'
+              }}
+            >
+              <PlusCircle size={18} />
+              <span>Gérer / Ajouter un Serveur Discord</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const categories = channels.filter((c) => c.type === 4);
   const textChannels = channels.filter((c) => c.type === 0);

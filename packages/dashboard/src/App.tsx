@@ -611,6 +611,8 @@ export function App() {
                 channels={channels}
                 onSaveSettings={handleSaveSettings}
                 selectedGuildName={selectedGuild.name}
+                selectedGuildId={selectedGuild.id}
+                onGoHome={() => handleSelectGuild(null)}
               />
             )}
 
