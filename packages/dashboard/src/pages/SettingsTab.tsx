@@ -155,7 +155,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 onChange={(e) => setForm({ ...form, deliveryMethod: e.target.value })}
               >
                 <option value="PUBLIC">📢 Public Reply (in the channel)</option>
-                <option value="EPHEMERAL_REVEAL">👁️ Secret Reveal (ephemeral button)</option>
                 <option value="DM">✉️ Direct Message (via DM)</option>
               </select>
             </div>
