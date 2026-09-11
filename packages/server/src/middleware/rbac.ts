@@ -1,32 +1,35 @@
-import { Request, Response, NextFunction } from 'express';
+import { RequestHandler } from 'express';
 import { isDevUser, isSuperAdminUser } from '../utils/allowedGuilds';
 
-export async function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
+export const requireSuperAdmin: RequestHandler = async (req, res, next) => {
   const user = (req as any).user;
   
   if (!user) {
-    return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
+    res.status(401).json({ error: 'Unauthorized: User not authenticated' });
+    return;
   }
 
   const hasPerm = await isSuperAdminUser(user.id);
   if (!hasPerm) {
-    return res.status(403).json({ error: 'Forbidden: Super Admin privileges required to perform this action' });
+    res.status(403).json({ error: 'Forbidden: Super Admin privileges required to perform this action' });
+    return;
   }
 
-  return next();
-}
+  next();
+};
 
-export function requireDev(req: Request, res: Response, next: NextFunction) {
+export const requireDev: RequestHandler = (req, res, next) => {
   const user = (req as any).user;
 
   if (!user) {
-    return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
+    res.status(401).json({ error: 'Unauthorized: User not authenticated' });
+    return;
   }
 
   if (!isDevUser(user.id)) {
-    return res.status(403).json({ error: 'Forbidden: Root Developer (Dev) privileges required to perform this action' });
+    res.status(403).json({ error: 'Forbidden: Root Developer (Dev) privileges required to perform this action' });
+    return;
   }
 
-  return next();
-}
-
+  next();
+};

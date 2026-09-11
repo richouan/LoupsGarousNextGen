@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 import prisma from '../db/prisma';
@@ -9,10 +9,11 @@ const router = Router();
 const getBotToken = () => process.env.DISCORD_BOT_TOKEN || '';
 
 // Authentication Middleware
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+export const authenticate: RequestHandler = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
+    res.status(401).json({ error: 'No token provided' });
+    return;
   }
 
   const token = authHeader.split(' ')[1];
@@ -20,46 +21,51 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
     const decoded = jwt.verify(token, getJwtSecret()) as any;
     (req as any).user = decoded.user;
     (req as any).guilds = decoded.guilds;
-    return next();
+    next();
   } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    res.status(401).json({ error: 'Invalid or expired token' });
+    return;
   }
-}
+};
 
 /**
  * SEC-01 FIX: Authorization middleware to prevent IDOR attacks.
  * Verifies that the authenticated user is the Owner or Administrator of :guildId.
  * Super Admins and Root Devs have global bypass rights.
  */
-export async function requireGuildAdmin(req: Request, res: Response, next: NextFunction) {
+export const requireGuildAdmin: RequestHandler = async (req, res, next) => {
   const { guildId } = req.params;
   const user = (req as any).user;
   const userGuilds = (req as any).guilds || [];
 
   if (!user) {
-    return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
+    res.status(401).json({ error: 'Unauthorized: User not authenticated' });
+    return;
   }
 
   // Super Admins & Root Devs have global privileges
   if (user.isSuperAdmin || user.isDev || (await isSuperAdminUser(user.id))) {
-    return next();
+    next();
+    return;
   }
 
   if (guildId === 'global') {
-    return res.status(403).json({ error: 'FORBIDDEN', message: 'Accès Super Admin requis pour les ressources globales.' });
+    res.status(403).json({ error: 'FORBIDDEN', message: 'Accès Super Admin requis pour les ressources globales.' });
+    return;
   }
 
   // Check if user owns or administrates this guild
   const matchedGuild = userGuilds.find((g: any) => g.id === guildId);
   if (!matchedGuild || (!matchedGuild.owner && !matchedGuild.isAdmin)) {
-    return res.status(403).json({
+    res.status(403).json({
       error: 'FORBIDDEN',
       message: 'Vous devez être propriétaire ou administrateur de ce serveur Discord pour effectuer cette action.'
     });
+    return;
   }
 
-  return next();
-}
+  next();
+};
 
 /**
  * Get channels & categories for a guild directly from Discord API

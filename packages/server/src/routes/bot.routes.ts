@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, RequestHandler } from 'express';
 import prisma from '../db/prisma';
 import {
   getAllowedGuildIds,
@@ -19,13 +19,14 @@ const router = Router();
  * SEC-02 FIX: Require internal bot secret authentication.
  * Protects server-to-bot endpoints against unauthorized external requests.
  */
-export function requireBotAuth(req: Request, res: Response, next: NextFunction) {
+export const requireBotAuth: RequestHandler = (req, res, next) => {
   const secretHeader = req.headers['x-bot-secret'] || req.headers['authorization'];
   const expectedSecret = process.env.INTERNAL_BOT_SECRET || process.env.DISCORD_BOT_TOKEN;
 
   if (!expectedSecret) {
     console.warn('[Security Warning] No INTERNAL_BOT_SECRET or DISCORD_BOT_TOKEN configured on server');
-    return res.status(500).json({ error: 'Server misconfiguration: Bot authentication secret missing' });
+    res.status(500).json({ error: 'Server misconfiguration: Bot authentication secret missing' });
+    return;
   }
 
   const token = typeof secretHeader === 'string' && secretHeader.startsWith('Bearer ')
@@ -35,11 +36,12 @@ export function requireBotAuth(req: Request, res: Response, next: NextFunction) 
     : secretHeader;
 
   if (!token || token !== expectedSecret) {
-    return res.status(403).json({ error: 'Forbidden: Invalid or missing bot authentication secret' });
+    res.status(403).json({ error: 'Forbidden: Invalid or missing bot authentication secret' });
+    return;
   }
 
-  return next();
-}
+  next();
+};
 
 /**
  * Public endpoint to retrieve allowed servers and development contact info
@@ -332,7 +334,7 @@ router.get('/card/:cardId', async (req: Request, res: Response) => {
  * Simulates how the bot would handle a chat message
  */
 router.post('/simulate-reply', async (req: Request, res: Response) => {
-  const { guildId, channelId, categoryId, messageContent, userId } = req.body;
+  const { guildId, channelId, categoryId, messageContent } = req.body;
 
   if (!messageContent) {
     return res.status(400).json({ error: 'Message content is required' });
