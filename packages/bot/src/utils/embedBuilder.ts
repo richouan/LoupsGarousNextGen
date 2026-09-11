@@ -17,10 +17,10 @@ export const CAMP_COLORS: Record<string, ColorResolvable> = {
 };
 
 export const CAMP_NAMES: Record<string, string> = {
-  VILLAGEOIS: '🛡️ قروي',
-  LOUPS: '🐺 ذئب',
-  SOLITAIRE: '🔮 منفرد',
-  NEUTRE: '⚖️ محايد'
+  VILLAGEOIS: 'قروي',
+  LOUPS: 'ذئب',
+  SOLITAIRE: 'منفرد',
+  NEUTRE: 'محايد'
 };
 
 export interface EmbedRequester {
@@ -49,14 +49,17 @@ export function buildCardEmbed(
   const color = CAMP_COLORS[card.camp] || 0x3b82f6;
   const campLabel = CAMP_NAMES[card.camp] || card.camp;
 
-  const stars = '★'.repeat(Math.min(5, Math.max(1, card.difficulty || 1)));
+  const diff = Math.min(5, Math.max(1, card.difficulty || 1));
+  // RTL formatted stars: filled stars start from the right in Arabic text flow
+  const stars = '\u200F' + '☆'.repeat(5 - diff) + '★'.repeat(diff);
+
   const abilityLabel = card.abilityType === 'NIGHT'
-    ? '🌙 ليلية'
+    ? 'ليلية'
     : card.abilityType === 'DAY'
-    ? '☀️ نهارية'
+    ? 'نهارية'
     : card.abilityType === 'PASSIVE'
-    ? '✨ دائمة'
-    : '❌ بدون';
+    ? 'دائمة'
+    : 'بدون';
 
   let descriptionContent = '';
 
@@ -65,24 +68,23 @@ export function buildCardEmbed(
   }
 
   if (card.description && card.description.trim()) {
-    descriptionContent += `📜 **شرح مفصل :**\n${toBoldLines(card.description)}\n\n`;
+    descriptionContent += `📜 **شرح مفصل :**\n${toBoldLines(card.description)}`;
   }
 
-  descriptionContent += `-# 💡 اكتب اسم أي دور في المحادثة لعرض تفاصيله فوراً`;
+  descriptionContent = descriptionContent.trim();
 
   const embed = new EmbedBuilder()
-    .setAuthor({
-      name: 'Loups-Garous NextGen • بطاقة دور',
-      iconURL: 'https://loupgarou.online/logo.png'
-    })
-    .setTitle(`🃏 ${card.name}`)
+    .setTitle(card.name)
     .setColor(color)
     .addFields(
-      { name: '🛡️ المجموعة', value: `**${campLabel}**`, inline: true },
-      { name: '⭐ الصعوبة', value: `**${stars}**`, inline: true },
-      { name: '⏳ القدرة', value: `**${abilityLabel}**`, inline: true }
-    )
-    .setDescription(descriptionContent);
+      { name: '( المجموعة : )', value: `**${campLabel}**`, inline: true },
+      { name: '( الصعوبة : )', value: `**${stars}**`, inline: true },
+      { name: '( القدرة : )', value: `**${abilityLabel}**`, inline: true }
+    );
+
+  if (descriptionContent) {
+    embed.setDescription(descriptionContent);
+  }
 
   if (requester?.username) {
     embed.setFooter({
