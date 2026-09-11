@@ -407,6 +407,14 @@ li {
   letter-spacing: 0.02em;
 }
 
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  gap: 0.35rem;
+}
+
 .btn-primary {
   background: var(--bg-dark-surface);
   color: var(--gold);
@@ -1209,6 +1217,66 @@ li {
   animation: fadeIn 0.3s ease;
 }
 
+.card-editor-header {
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.2s ease;
+}
+
+.editor-back-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+}
+
+.editor-back-btn:hover {
+  color: var(--text-cream);
+}
+
+.editor-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-save-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.editor-delete-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  font-family: var(--font-title);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.editor-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
 .editor-grid {
   display: grid;
   grid-template-columns: 350px 1fr;
@@ -1440,6 +1508,45 @@ li {
 @keyframes dropdownFade {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  /* Sticky top action bar on mobile so virtual keyboard never obstructs or covers writing */
+  .card-editor-header {
+    position: sticky;
+    top: 58px; /* Docks right under the sticky navbar */
+    z-index: 90;
+    background: rgba(10, 10, 14, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0.6rem 0.75rem;
+    margin: -1rem -1rem 1rem -1rem;
+    border-bottom: 1px solid var(--border-gold-dim);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  }
+
+  .editor-back-btn span {
+    font-size: 0.85rem;
+  }
+
+  .header-save-actions {
+    gap: 0.35rem;
+  }
+
+  .header-save-actions .btn-sm {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  /* Completely hide the floating bottom banner on mobile so it NEVER covers inputs/textareas while typing! */
+  .desktop-only-banner,
+  .unsaved-banner {
+    display: none !important;
+  }
+
+  .card-editor-layout {
+    padding-bottom: 3rem;
+  }
 }
 
 @media (max-width: 900px) {

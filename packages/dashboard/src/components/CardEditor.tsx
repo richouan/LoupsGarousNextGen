@@ -164,74 +164,73 @@ export const CardEditor: React.FC<CardEditorProps> = ({
 
   return (
     <div className="card-editor-layout">
-      {/* Top Header / Back Button */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Top Header / Back Button + Actions (Sticky on Mobile) */}
+      <div className="card-editor-header">
         <button
           onClick={handleClose}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            cursor: 'pointer',
-            fontFamily: 'var(--font-title)',
-            fontSize: '1rem',
-            fontWeight: 500
-          }}
+          className="editor-back-btn"
+          type="button"
         >
           <ArrowLeft size={18} />
-          Retour aux rôles
+          <span>Retour aux rôles</span>
         </button>
 
-        {initialCard && onDelete && (
-          <button
-            onClick={async () => {
-              if (deleteStep === 0) {
-                setDeleteStep(1);
-              } else if (deleteStep === 1) {
-                setDeleteStep(2);
-              } else if (deleteStep === 2) {
-                setLoading(true);
-                try {
-                  await onDelete(initialCard.id);
-                } catch (err) {
-                  console.error('Failed to delete card:', err);
-                  setDeleteStep(0);
-                } finally {
-                  setLoading(false);
+        <div className="editor-header-actions">
+          {hasChanges && (
+            <div className="header-save-actions">
+              <button
+                className="btn btn-secondary btn-sm"
+                type="button"
+                onClick={handleReset}
+              >
+                Reset
+              </button>
+              <button
+                className="btn btn-gold btn-sm"
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          )}
+
+          {initialCard && onDelete && (
+            <button
+              onClick={async () => {
+                if (deleteStep === 0) {
+                  setDeleteStep(1);
+                } else if (deleteStep === 1) {
+                  setDeleteStep(2);
+                } else if (deleteStep === 2) {
+                  setLoading(true);
+                  try {
+                    await onDelete(initialCard.id);
+                  } catch (err) {
+                    console.error('Failed to delete card:', err);
+                    setDeleteStep(0);
+                  } finally {
+                    setLoading(false);
+                  }
                 }
-              }
-            }}
-            disabled={loading}
-            style={{
-              background: deleteStep > 0 ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
-              border: deleteStep > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid transparent',
-              color: '#ef4444',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-title)',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              padding: deleteStep === 0 ? '0.5rem' : '0.5rem 1rem',
-              borderRadius: '6px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              if (deleteStep === 0) e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-            }}
-            onMouseLeave={(e) => {
-              if (deleteStep === 0) e.currentTarget.style.background = 'transparent';
-            }}
-            title="Delete Role"
-          >
-            <Trash2 size={deleteStep === 0 ? 18 : 16} />
-            {deleteStep === 1 ? 'r u suure !!!!!!' : deleteStep === 2 ? 'delete permanante !!!!' : null}
-          </button>
-        )}
+              }}
+              disabled={loading}
+              className="editor-delete-btn"
+              type="button"
+              style={{
+                background: deleteStep > 0 ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
+                border: deleteStep > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid transparent',
+                color: '#ef4444',
+                padding: deleteStep === 0 ? '0.4rem' : '0.4rem 0.8rem'
+              }}
+              title="Delete Role"
+            >
+              <Trash2 size={deleteStep === 0 ? 18 : 16} />
+              {deleteStep === 1 ? 'r u suure !!!!!!' : deleteStep === 2 ? 'delete permanante !!!!' : null}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="editor-grid">
@@ -374,11 +373,11 @@ export const CardEditor: React.FC<CardEditorProps> = ({
       </div>
 
       {hasChanges && (
-        <div className="unsaved-banner">
+        <div className="unsaved-banner desktop-only-banner">
           <span>Careful — you have unsaved changes!</span>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button className="btn btn-secondary" type="button" onClick={handleReset}>Reset</button>
-            <button className="btn btn-gold" type="button" onClick={handleSubmit}>
+            <button className="btn btn-gold" type="button" onClick={handleSubmit} disabled={loading}>
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
