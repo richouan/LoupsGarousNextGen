@@ -17,6 +17,7 @@ interface User {
   username: string;
   avatar: string | null;
   isSuperAdmin?: boolean;
+  isDev?: boolean;
 }
 
 interface NavbarProps {
@@ -286,7 +287,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     {user.username}
-                    {user.isSuperAdmin && (
+                    {user.isDev ? (
+                      <span style={{
+                        fontSize: '0.62rem',
+                        background: '#8b5cf6',
+                        color: '#ffffff',
+                        padding: '2px 7px',
+                        borderRadius: '4px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        fontWeight: 800,
+                        boxShadow: '0 0 10px rgba(139, 92, 246, 0.45)'
+                      }}>
+                        DEV
+                      </span>
+                    ) : user.isSuperAdmin ? (
                       <span style={{
                         fontSize: '0.6rem',
                         background: 'var(--gold)',
@@ -298,9 +313,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }}>
                         Super Admin
                       </span>
-                    )}
+                    ) : null}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Administrator</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {user.isDev ? 'Developer' : user.isSuperAdmin ? 'Super Administrator' : 'Administrator'}
+                  </span>
                 </div>
                 <button
                   className="btn btn-secondary logout-btn"
