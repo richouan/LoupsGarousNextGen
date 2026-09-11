@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { isImagePreloaded, onImagePreloaded } from '../utils/cardPreloader';
 
 interface LazyCardImageProps {
   src: string;
@@ -11,20 +12,37 @@ interface LazyCardImageProps {
 export const LazyCardImage: React.FC<LazyCardImageProps> = ({
   src,
   alt,
-  placeholderEmoji = '🐺',
   priority = false,
   className = ''
 }) => {
-  const [isInView, setIsInView] = useState(priority);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(() => priority || isImagePreloaded(src));
+  const [isLoaded, setIsLoaded] = useState(() => isImagePreloaded(src));
   const [hasError, setHasError] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  // If background preloader finishes this image while on page, mark ready
   useEffect(() => {
-    if (priority) {
+    if (isLoaded) return;
+
+    if (isImagePreloaded(src)) {
       setIsInView(true);
+      setIsLoaded(true);
       return;
     }
+
+    const unsubscribe = onImagePreloaded((loadedUrl) => {
+      if (loadedUrl === src) {
+        setIsInView(true);
+        setIsLoaded(true);
+      }
+    });
+
+    return unsubscribe;
+  }, [src, isLoaded]);
+
+  // Observer if user scrolls to this card before background queue reaches it
+  useEffect(() => {
+    if (isInView) return;
 
     const element = containerRef.current;
     if (!element) return;
@@ -43,7 +61,7 @@ export const LazyCardImage: React.FC<LazyCardImageProps> = ({
         }
       },
       {
-        rootMargin: '180px 0px', // Start fetching right before coming into viewport
+        rootMargin: '200px 0px', // Start fetching right before coming into viewport
         threshold: 0.01
       }
     );
@@ -53,7 +71,7 @@ export const LazyCardImage: React.FC<LazyCardImageProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [priority, src]);
+  }, [isInView]);
 
   return (
     <div ref={containerRef} className={`lazy-image-container ${className}`}>

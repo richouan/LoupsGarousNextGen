@@ -16,6 +16,7 @@ import { CardEditor } from '../components/CardEditor';
 import { DiscordEmbedPreview } from '../components/DiscordEmbedPreview';
 import { LazyCardImage } from '../components/LazyCardImage';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
+import { startSequentialCardPreload } from '../utils/cardPreloader';
 
 interface CardsTabProps {
   cards: any[];
@@ -127,6 +128,14 @@ export const CardsTab: React.FC<CardsTabProps> = ({
   const visibleCards = useMemo(() => {
     return filteredCards.slice(0, visibleCount);
   }, [filteredCards, visibleCount]);
+
+  // Background download of all card images in hierarchy order (row by row to the end)
+  // Even if user never scrolls, all cards download in the background!
+  useEffect(() => {
+    if (filteredCards.length > 0) {
+      startSequentialCardPreload(filteredCards, initialBatch);
+    }
+  }, [filteredCards, initialBatch]);
 
   const campBadgeClass: Record<string, string> = {
     VILLAGEOIS: 'badge-village',
