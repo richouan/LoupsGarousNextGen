@@ -134,6 +134,15 @@ router.post('/callback', authCallbackLimiter, async (req: Request, res: Response
     // Generate session JWT (stores minimal profile + id)
     const token = jwt.sign({ user, guilds }, getJwtSecret(), { expiresIn: '30d' });
 
+    // Set persistent HTTP cookie for bulletproof mobile browser retention
+    res.cookie('lg_auth_token', token, {
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      httpOnly: false,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/'
+    });
+
     const allowedGuilds = await getAllowedGuildsDetails();
     const contactUser = getContactUser();
 
