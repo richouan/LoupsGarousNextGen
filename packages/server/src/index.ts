@@ -15,6 +15,15 @@ import uploadRoutes from './routes/upload.routes';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Canonical redirect: www.loupgarou.online -> loupgarou.online
+app.use((req, res, next) => {
+  const host = req.headers.host || '';
+  if (host.startsWith('www.loupgarou.online')) {
+    return res.redirect(301, `https://loupgarou.online${req.originalUrl}`);
+  }
+  next();
+});
+
 // Middlewares
 const allowedOrigins = [
   'http://localhost:5173',

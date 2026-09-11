@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from './api';
+import { api, getSavedToken, saveSavedToken, clearSavedToken } from './api';
 import { Navbar } from './components/Navbar';
 import { CardsTab } from './pages/CardsTab';
 import { SettingsTab } from './pages/SettingsTab';
@@ -17,7 +17,7 @@ export function App() {
   const [channels, setChannels] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(() => {
-    const hasToken = Boolean(localStorage.getItem('lg_auth_token'));
+    const hasToken = Boolean(getSavedToken());
     const urlParams = new URLSearchParams(window.location.search);
     const hasCode = Boolean(urlParams.get('code') || urlParams.get('token'));
     return hasToken || hasCode;
@@ -31,7 +31,7 @@ export function App() {
     authInitRef.current = true;
     
     const initAuth = async () => {
-      const token = localStorage.getItem('lg_auth_token');
+      const token = getSavedToken();
       const urlParams = new URLSearchParams(window.location.search);
       const urlToken = urlParams.get('token');
       const code = urlParams.get('code');
@@ -60,7 +60,7 @@ export function App() {
           const res = await api.get('/auth/me');
           if (res.data.user.id === '999999999999999999') {
             console.warn('Old demo token detected, clearing session...');
-            localStorage.removeItem('lg_auth_token');
+            clearSavedToken();
             window.location.href = '/api/auth/discord';
             return;
           }
@@ -70,13 +70,13 @@ export function App() {
           console.error('Session validation check failed:', err);
           // Only clear session if token is explicitly expired or unauthorized (401 / 403)
           if (err?.response?.status === 401 || err?.response?.status === 403) {
-            localStorage.removeItem('lg_auth_token');
+            clearSavedToken();
           }
         } finally {
           setAuthLoading(false);
         }
       } else if (urlToken) {
-        localStorage.setItem('lg_auth_token', urlToken);
+        saveSavedToken(urlToken);
         window.history.replaceState({}, document.title, '/');
         try {
           const res = await api.get('/auth/me');
@@ -84,7 +84,7 @@ export function App() {
         } catch (err: any) {
           console.error('Failed to validate url token:', err);
           if (err?.response?.status === 401 || err?.response?.status === 403) {
-            localStorage.removeItem('lg_auth_token');
+            clearSavedToken();
           }
         } finally {
           setAuthLoading(false);
@@ -94,7 +94,7 @@ export function App() {
           const callbackRes = await api.post('/auth/callback', { code });
           const { token: receivedToken, user: receivedUser, guilds: receivedGuilds } = callbackRes.data;
           if (receivedToken) {
-            localStorage.setItem('lg_auth_token', receivedToken);
+            saveSavedToken(receivedToken);
             finalizeUserSession(receivedUser, receivedGuilds);
           }
         } catch (err) {
@@ -146,7 +146,7 @@ export function App() {
 
 
   const handleLogout = () => {
-    localStorage.removeItem('lg_auth_token');
+    clearSavedToken();
     setUser(null);
     setGuilds([]);
     setSelectedGuild(null);
