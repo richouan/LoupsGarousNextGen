@@ -44,6 +44,37 @@ export async function isSuperAdminUser(userId: string | null | undefined): Promi
   return !!found;
 }
 
+let cachedWhitelistEnabled: { value: boolean; cachedAt: number } | null = null;
+
+export async function isWhitelistEnabled(): Promise<boolean> {
+  const now = Date.now();
+  if (cachedWhitelistEnabled && now - cachedWhitelistEnabled.cachedAt < 5000) {
+    return cachedWhitelistEnabled.value;
+  }
+
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: 'whitelist_enabled' }
+    });
+    // Default to true (whitelist active) if not explicitly set to false
+    const enabled = setting ? setting.value === 'true' : true;
+    cachedWhitelistEnabled = { value: enabled, cachedAt: now };
+    return enabled;
+  } catch {
+    return true;
+  }
+}
+
+export async function setWhitelistEnabled(enabled: boolean): Promise<boolean> {
+  await prisma.systemSetting.upsert({
+    where: { key: 'whitelist_enabled' },
+    update: { value: enabled ? 'true' : 'false' },
+    create: { key: 'whitelist_enabled', value: enabled ? 'true' : 'false' }
+  });
+  cachedWhitelistEnabled = { value: enabled, cachedAt: Date.now() };
+  return enabled;
+}
+
 export async function getAllowedGuildIds(): Promise<string[]> {
   const list = await prisma.allowedGuild.findMany({
     select: { id: true }
@@ -59,6 +90,12 @@ export async function getAllowedGuildIds(): Promise<string[]> {
 
 export async function isGuildAllowed(guildId: string | null | undefined): Promise<boolean> {
   if (!guildId || guildId === 'global') return true;
+
+  const whitelistOn = await isWhitelistEnabled();
+  if (!whitelistOn) {
+    // Whitelist is disabled: all servers are allowed (public mode)
+    return true;
+  }
 
   const count = await prisma.allowedGuild.count();
   if (count === 0) {

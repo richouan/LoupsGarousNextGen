@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import prisma from '../db/prisma';
 import {
   isGuildAllowed,
+  isWhitelistEnabled,
   getAllowedGuildIds,
   getAllowedGuildsDetails,
   getContactUser,
@@ -96,6 +97,7 @@ router.post('/callback', async (req: Request, res: Response) => {
       select: { id: true }
     });
     const botGuildIds = new Set(existingDbGuilds.map((g: any) => g.id));
+    const whitelistActive = await isWhitelistEnabled();
     const allowedIds = new Set(await getAllowedGuildIds());
 
     const guilds = filteredGuilds.map((g: any) => {
@@ -104,7 +106,7 @@ router.post('/callback', async (req: Request, res: Response) => {
         : null;
 
       const hasBot = botGuildIds.has(g.id);
-      const isAllowed = allowedIds.has(g.id);
+      const isAllowed = !whitelistActive || allowedIds.has(g.id);
 
       return {
         id: g.id,
@@ -124,7 +126,7 @@ router.post('/callback', async (req: Request, res: Response) => {
     const allowedGuilds = await getAllowedGuildsDetails();
     const contactUser = getContactUser();
 
-    return res.json({ token, user, guilds, allowedGuilds, contactUser });
+    return res.json({ token, user, guilds, allowedGuilds, contactUser, isWhitelistEnabled: whitelistActive });
   } catch (err: any) {
     console.error('OAuth Callback Error:', err.response?.data || err.message);
     return res.status(500).json({ error: 'Failed to authenticate with Discord' });
@@ -154,6 +156,7 @@ router.get('/me', async (req: Request, res: Response) => {
     // Filter guilds: owner OR has Administrator permission
     const ADMIN_BIT2 = BigInt(0x8);
     const rawGuilds = decoded.guilds || [];
+    const whitelistActive = await isWhitelistEnabled();
     const updatedGuilds = rawGuilds
       .filter((g: any) => {
         if (g.owner === true) return true;
@@ -161,7 +164,7 @@ router.get('/me', async (req: Request, res: Response) => {
       })
       .map((g: any) => {
         const hasBot = botGuildIds.has(g.id);
-        const isAllowed = allowedIds.has(g.id);
+        const isAllowed = !whitelistActive || allowedIds.has(g.id);
         const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${getClientId()}&permissions=8&scope=bot&guild_id=${g.id}&disable_guild_select=true`;
         return {
           ...g,
@@ -182,7 +185,13 @@ router.get('/me', async (req: Request, res: Response) => {
       isSuperAdmin
     };
 
-    return res.json({ user: updatedUser, guilds: updatedGuilds, allowedGuilds, contactUser });
+    return res.json({
+      user: updatedUser,
+      guilds: updatedGuilds,
+      allowedGuilds,
+      contactUser,
+      isWhitelistEnabled: whitelistActive
+    });
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token' });
   }

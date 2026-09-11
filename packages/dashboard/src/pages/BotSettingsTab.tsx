@@ -2,27 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 import {
   Server,
-  ShieldAlert,
   Trash2,
   Plus,
   Crown,
   CheckCircle,
   AlertCircle,
   RefreshCw,
-  ExternalLink,
+  Copy,
+  Check,
+  Globe,
   Lock,
-  UserCheck,
-  Settings,
-  LayoutList,
-  MessageSquare,
-  Terminal,
-  ShieldCheck,
-  FileText,
-  Database,
-  Wrench
+  ShieldCheck
 } from 'lucide-react';
 
-interface AllowedGuild {
+export interface AllowedGuild {
   id: string;
   name: string;
   icon: string | null;
@@ -30,7 +23,7 @@ interface AllowedGuild {
   createdAt?: string;
 }
 
-interface SuperAdmin {
+export interface SuperAdmin {
   id: string;
   username: string;
   avatar: string | null;
@@ -41,16 +34,20 @@ interface SuperAdmin {
 interface BotSettingsTabProps {
   currentUser: any;
   onAllowedGuildsUpdated?: (guilds: AllowedGuild[]) => void;
+  onWhitelistToggle?: (enabled: boolean) => void;
 }
 
 export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
   currentUser,
-  onAllowedGuildsUpdated
+  onAllowedGuildsUpdated,
+  onWhitelistToggle
 }) => {
   const [allowedGuilds, setAllowedGuilds] = useState<AllowedGuild[]>([]);
   const [superAdmins, setSuperAdmins] = useState<SuperAdmin[]>([]);
+  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState<boolean>(true);
+  const [isTogglingWhitelist, setIsTogglingWhitelist] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState('servers');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Form inputs
   const [newGuildId, setNewGuildId] = useState('');
@@ -67,6 +64,12 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
       const res = await api.get('/bot/admin-settings');
       setAllowedGuilds(res.data.allowedGuilds || []);
       setSuperAdmins(res.data.superAdmins || []);
+      if (res.data.isWhitelistEnabled !== undefined) {
+        setIsWhitelistEnabled(res.data.isWhitelistEnabled);
+        if (onWhitelistToggle) {
+          onWhitelistToggle(res.data.isWhitelistEnabled);
+        }
+      }
       if (onAllowedGuildsUpdated) {
         onAllowedGuildsUpdated(res.data.allowedGuilds || []);
       }
@@ -81,7 +84,24 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
     fetchAdminSettings();
   }, []);
 
-  // 1. Add Allowed Guild
+  // 1. Toggle Whitelist Mode
+  const handleToggleWhitelist = async () => {
+    const nextState = !isWhitelistEnabled;
+    setIsTogglingWhitelist(true);
+    try {
+      const res = await api.post('/bot/whitelist-toggle', { enabled: nextState });
+      setIsWhitelistEnabled(res.data.isWhitelistEnabled);
+      if (onWhitelistToggle) {
+        onWhitelistToggle(res.data.isWhitelistEnabled);
+      }
+    } catch (err: any) {
+      alert('Erreur lors du changement de mode: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setIsTogglingWhitelist(false);
+    }
+  };
+
+  // 2. Add Allowed Guild
   const handleAddGuild = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanId = newGuildId.trim();
@@ -94,7 +114,7 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
       const res = await api.post('/bot/allowed-guilds', { guildId: cleanId });
       setGuildMessage({
         type: 'success',
-        text: `Serveur "${res.data.guild?.name || cleanId}" ajouté avec succès !`
+        text: `Serveur "${res.data.guild?.name || cleanId}" ajouté !`
       });
       setNewGuildId('');
       fetchAdminSettings();
@@ -108,22 +128,22 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
     }
   };
 
-  // 2. Delete Allowed Guild
+  // 3. Delete Allowed Guild
   const handleDeleteGuild = async (guildId: string, guildName: string) => {
-    if (!window.confirm(`Êtes-vous sûr de vouloir retirer l'autorisation pour "${guildName}" (${guildId}) ? Le bot cessera de répondre sur ce serveur.`)) {
+    if (!window.confirm(`Retirer l'autorisation pour "${guildName}" (${guildId}) ?`)) {
       return;
     }
 
     try {
       await api.delete(`/bot/allowed-guilds/${guildId}`);
-      setAllowedGuilds(allowedGuilds.filter((g) => g.id !== guildId));
+      setAllowedGuilds((prev) => prev.filter((g) => g.id !== guildId));
       fetchAdminSettings();
     } catch (err: any) {
-      alert('Impossible de supprimer ce serveur: ' + (err.response?.data?.error || err.message));
+      alert('Impossible de supprimer: ' + (err.response?.data?.error || err.message));
     }
   };
 
-  // 3. Add Super Admin
+  // 4. Add Super Admin
   const handleAddSuperAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanId = newUserId.trim();
@@ -136,7 +156,7 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
       const res = await api.post('/bot/super-admins', { userId: cleanId });
       setAdminMessage({
         type: 'success',
-        text: `Super Admin "${res.data.superAdmin?.username || cleanId}" ajouté avec succès !`
+        text: `Admin "${res.data.superAdmin?.username || cleanId}" ajouté !`
       });
       setNewUserId('');
       fetchAdminSettings();
@@ -150,7 +170,7 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
     }
   };
 
-  // 4. Delete Super Admin
+  // 5. Delete Super Admin
   const handleDeleteSuperAdmin = async (userId: string, username: string) => {
     if (!window.confirm(`Révoquer les droits Super Admin pour "${username}" (${userId}) ?`)) {
       return;
@@ -158,551 +178,852 @@ export const BotSettingsTab: React.FC<BotSettingsTabProps> = ({
 
     try {
       await api.delete(`/bot/super-admins/${userId}`);
-      setSuperAdmins(superAdmins.filter((sa) => sa.id !== userId));
+      setSuperAdmins((prev) => prev.filter((sa) => sa.id !== userId));
       fetchAdminSettings();
     } catch (err: any) {
-      alert('Impossible de révoquer ce Super Admin: ' + (err.response?.data?.error || err.message));
+      alert('Impossible de révoquer: ' + (err.response?.data?.error || err.message));
     }
   };
 
-  const sidebarTabs = [
-    { id: 'servers', label: 'Serveurs autorisés', sub: 'Gérez la whitelist', icon: Server },
-    { id: 'admins', label: 'Super Admins', sub: 'Gérez les administrateurs', icon: Crown },
-    { id: 'general', label: 'Paramètres généraux', sub: 'Configuration du bot', icon: Settings },
-    { id: 'game', label: 'Paramètres de jeu', sub: 'Rôles et mécaniques', icon: LayoutList },
-    { id: 'messages', label: 'Messages & Embeds', sub: 'Personnalisation', icon: MessageSquare },
-    { id: 'commands', label: 'Commandes', sub: 'Activation et permissions', icon: Terminal },
-    { id: 'security', label: 'Sécurité', sub: 'Restrictions et protection', icon: ShieldCheck },
-    { id: 'logs', label: 'Logs & Audit', sub: 'Historique des actions', icon: FileText },
-    { id: 'backup', label: 'Backup & Export', sub: 'Sauvegarde', icon: Database },
-    { id: 'tools', label: 'Outils développeur', sub: 'Variables avancées', icon: Wrench },
-  ];
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(text);
+    setTimeout(() => setCopiedId(null), 1800);
+  };
 
   return (
-    <div style={{ animation: 'fadeIn 0.25s ease' }}>
-      {/* Tab Header */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
-            <h1 style={{ margin: 0 }}>Paramètres Bot & Gestion Dev</h1>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                background: 'rgba(234, 179, 8, 0.15)',
-                border: '1px solid rgba(234, 179, 8, 0.4)',
-                color: '#facc15',
-                padding: '0.2rem 0.6rem',
-                borderRadius: '9999px',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                letterSpacing: '0.05em'
-              }}
-            >
-              <Crown size={12} /> ROOT DEV
-            </span>
+    <div style={{ animation: 'fadeIn 0.2s ease', maxWidth: '1240px', margin: '0 auto' }}>
+      {/* Top Header Bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
+          marginBottom: '1rem',
+          paddingBottom: '0.75rem',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h1 style={{ margin: 0, fontSize: '1.35rem', fontFamily: 'var(--font-title)' }}>
+                Paramètres Bot & Gestion Dev
+              </h1>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  background: 'rgba(168, 85, 247, 0.15)',
+                  border: '1px solid rgba(168, 85, 247, 0.4)',
+                  color: '#c084fc',
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em'
+                }}
+              >
+                <Crown size={11} /> ROOT DEV
+              </span>
+            </div>
+            <p style={{ margin: 0, color: 'var(--text-dark-secondary)', fontSize: '0.82rem', marginTop: '0.15rem' }}>
+              Contrôlez le mode d'accès du bot (Whitelist / Public) et les permissions des Super Admins.
+            </p>
           </div>
-          <p style={{ color: 'var(--text-dark-secondary)', fontSize: '0.95rem' }}>
-            Contrôlez les serveurs autorisés (Whitelist Bêta) et déléguez les privilèges Super Admin en direct depuis le tableau de bord.
-          </p>
         </div>
 
         <button
           onClick={fetchAdminSettings}
           className="btn btn-secondary"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.84rem' }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            fontSize: '0.8rem',
+            padding: '0.4rem 0.75rem'
+          }}
           disabled={loading}
+          title="Rafraîchir les données"
         >
-          <RefreshCw size={14} className={loading ? 'spin' : ''} /> Actualiser
+          <RefreshCw size={13} className={loading ? 'spin' : ''} /> Actualiser
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        {/* Sidebar */}
-        <div style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          {sidebarTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeSubTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSubTab(tab.id)}
+      {/* Main 2-Column High-Density Grid */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
+          gap: '1.25rem',
+          alignItems: 'start'
+        }}
+      >
+        {/* ========================================================================= */}
+        {/* COLUMN 1: SERVEURS AUTORISÉS & MODE WHITELIST TOGGLE                     */}
+        {/* ========================================================================= */}
+        <div
+          className="glass-panel"
+          style={{
+            padding: '1.2rem',
+            borderRadius: 'var(--radius-md)',
+            border: isWhitelistEnabled
+              ? '1px solid rgba(234, 179, 8, 0.25)'
+              : '1px solid rgba(59, 130, 246, 0.25)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)'
+          }}
+        >
+          {/* Card Header with Whitelist Toggle */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '0.85rem',
+              gap: '0.5rem',
+              flexWrap: 'wrap'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div
                 style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: isWhitelistEnabled ? 'rgba(234, 179, 8, 0.12)' : 'rgba(59, 130, 246, 0.12)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.85rem 1rem',
-                  background: isActive ? 'var(--bg-dark-surface)' : 'transparent',
-                  border: '1px solid',
-                  borderColor: isActive ? 'var(--gold)' : 'transparent',
-                  borderRadius: 'var(--radius-sm)',
-                  color: isActive ? 'var(--gold)' : 'var(--text-cream)',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
+                  justifyContent: 'center',
+                  border: isWhitelistEnabled ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)'
                 }}
               >
-                <Icon size={18} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.92rem', fontWeight: isActive ? 700 : 500 }}>
-                    {tab.label}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: isActive ? 'rgba(201, 168, 76, 0.8)' : 'var(--text-muted)' }}>
-                    {tab.sub}
-                  </div>
+                {isWhitelistEnabled ? <Server size={17} color="var(--gold)" /> : <Globe size={17} color="#60a5fa" />}
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <h2 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-gold)', fontFamily: 'var(--font-title)' }}>
+                    Serveurs Autorisés
+                  </h2>
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      padding: '0.1rem 0.4rem',
+                      borderRadius: '4px',
+                      color: 'var(--text-cream)'
+                    }}
+                  >
+                    {allowedGuilds.length}
+                  </span>
                 </div>
-              </button>
-            );
-          })}
-        </div>
+              </div>
+            </div>
 
-        {/* Main Content Area */}
-        <div style={{ flex: 1, minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
-          {activeSubTab === 'servers' && (
-            <>
-              {/* ========================================================================= */}
-              {/* SECTION 1: SERVEURS AUTORISÉS (WHITELIST) */}
-              {/* ========================================================================= */}
-        <div className="glass-panel" style={{ padding: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-            <Server size={22} color="var(--gold)" />
-            <h2 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--text-gold)', fontFamily: 'var(--font-title)' }}>
-              Serveurs Partenaires Autorisés (Whitelist)
-            </h2>
+            {/* Whitelist Toggle Switch */}
+            <div
+              onClick={!isTogglingWhitelist ? handleToggleWhitelist : undefined}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                background: 'rgba(0, 0, 0, 0.35)',
+                padding: '0.25rem 0.5rem 0.25rem 0.65rem',
+                borderRadius: '9999px',
+                border: isWhitelistEnabled
+                  ? '1px solid rgba(34, 197, 94, 0.4)'
+                  : '1px solid rgba(148, 163, 184, 0.25)',
+                cursor: isTogglingWhitelist ? 'wait' : 'pointer',
+                userSelect: 'none',
+                transition: 'all 0.2s ease'
+              }}
+              title={isWhitelistEnabled ? "Cliquez pour désactiver la whitelist (mode public)" : "Cliquez pour activer la whitelist"}
+            >
+              <span
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  color: isWhitelistEnabled ? '#4ade80' : '#94a3b8',
+                  letterSpacing: '0.02em'
+                }}
+              >
+                {isWhitelistEnabled ? 'Whitelist Active' : 'Mode Public'}
+              </span>
+
+              {/* Pill Switch */}
+              <div
+                style={{
+                  width: '34px',
+                  height: '18px',
+                  background: isWhitelistEnabled ? '#16a34a' : '#334155',
+                  borderRadius: '9999px',
+                  position: 'relative',
+                  transition: 'background 0.2s ease'
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '2px',
+                    left: isWhitelistEnabled ? '18px' : '2px',
+                    width: '14px',
+                    height: '14px',
+                    borderRadius: '50%',
+                    background: '#ffffff',
+                    transition: 'left 0.2s ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.4)'
+                  }}
+                />
+              </div>
+            </div>
           </div>
-          <p style={{ color: 'var(--text-light-muted)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-            Seuls les serveurs listés ci-dessous peuvent utiliser le bot Loup-Garou et configurer des salons. Tout autre serveur qui tente d'utiliser le bot verra l'écran de restriction et l'invitation à contacter le développeur.
-          </p>
 
-          {/* Add Guild Form */}
+          {/* Mode Status Banner (Compact) */}
+          <div
+            style={{
+              padding: '0.45rem 0.75rem',
+              borderRadius: '6px',
+              fontSize: '0.78rem',
+              lineHeight: '1.35',
+              marginBottom: '0.85rem',
+              background: isWhitelistEnabled ? 'rgba(34, 197, 94, 0.08)' : 'rgba(59, 130, 246, 0.08)',
+              border: isWhitelistEnabled ? '1px solid rgba(34, 197, 94, 0.2)' : '1px solid rgba(59, 130, 246, 0.2)',
+              color: isWhitelistEnabled ? '#86efac' : '#93c5fd',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem'
+            }}
+          >
+            {isWhitelistEnabled ? (
+              <>
+                <Lock size={13} style={{ flexShrink: 0 }} />
+                <span>
+                  <strong>Mode Restreint :</strong> Seuls les serveurs listés ci-dessous peuvent utiliser le bot. Les autres verront l'écran de restriction.
+                </span>
+              </>
+            ) : (
+              <>
+                <Globe size={13} style={{ flexShrink: 0 }} />
+                <span>
+                  <strong>Mode Public :</strong> Tous les serveurs Discord peuvent inviter et utiliser le bot sans restriction.
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Compact Inline Add Server Form */}
           <form
             onSubmit={handleAddGuild}
             style={{
               display: 'flex',
-              gap: '0.75rem',
+              gap: '0.4rem',
               alignItems: 'center',
-              marginBottom: '1.5rem',
-              background: 'rgba(0, 0, 0, 0.25)',
-              padding: '0.75rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              flexWrap: 'wrap'
+              marginBottom: '0.85rem'
             }}
           >
-            <div style={{ flex: 1, minWidth: '240px' }}>
-              <input
-                type="text"
-                className="input-text"
-                placeholder="ID du serveur Discord (ex: 1461119651021979710)"
-                value={newGuildId}
-                onChange={(e) => setNewGuildId(e.target.value)}
-                disabled={isAddingGuild}
-                style={{ width: '100%' }}
-              />
-            </div>
-
+            <input
+              type="text"
+              placeholder="ID Discord du serveur (ex: 1461119651021979710)"
+              value={newGuildId}
+              onChange={(e) => setNewGuildId(e.target.value)}
+              style={{
+                flex: 1,
+                background: 'rgba(0, 0, 0, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '6px',
+                padding: '0.45rem 0.75rem',
+                color: '#ffffff',
+                fontSize: '0.82rem',
+                outline: 'none',
+                transition: 'border-color 0.15s ease'
+              }}
+              onFocus={(e) => (e.target.style.borderColor = 'var(--gold)')}
+              onBlur={(e) => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)')}
+            />
             <button
               type="submit"
-              className="btn btn-gold"
+              className="btn btn-primary"
               disabled={isAddingGuild || !newGuildId.trim()}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.25rem' }}
+              style={{
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.8rem',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                height: '34px'
+              }}
             >
-              <Plus size={16} />
-              {isAddingGuild ? 'Recherche Discord...' : 'Ajouter le serveur'}
+              <Plus size={14} /> {isAddingGuild ? 'Ajout...' : 'Ajouter'}
             </button>
           </form>
 
+          {/* Feedback message */}
           {guildMessage && (
             <div
               style={{
-                padding: '0.65rem 1rem',
-                borderRadius: 'var(--radius-sm)',
-                marginBottom: '1.25rem',
+                padding: '0.4rem 0.65rem',
+                borderRadius: '6px',
+                fontSize: '0.76rem',
+                marginBottom: '0.75rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.88rem',
-                background: guildMessage.type === 'success' ? 'rgba(74, 222, 128, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                border: `1px solid ${guildMessage.type === 'success' ? 'rgba(74, 222, 128, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                gap: '0.4rem',
+                background:
+                  guildMessage.type === 'success'
+                    ? 'rgba(34, 197, 94, 0.15)'
+                    : 'rgba(239, 68, 68, 0.15)',
+                border:
+                  guildMessage.type === 'success'
+                    ? '1px solid rgba(34, 197, 94, 0.3)'
+                    : '1px solid rgba(239, 68, 68, 0.3)',
                 color: guildMessage.type === 'success' ? '#86efac' : '#fca5a5'
               }}
             >
-              {guildMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+              {guildMessage.type === 'success' ? <CheckCircle size={13} /> : <AlertCircle size={13} />}
               <span>{guildMessage.text}</span>
             </div>
           )}
 
-          {/* List of Allowed Guilds */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
-            {allowedGuilds.map((g, index) => (
-              <div
-                key={g.id}
-                style={{
-                  background: 'rgba(15, 23, 42, 0.65)',
-                  border: '1px solid rgba(201, 168, 76, 0.25)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
-                  position: 'relative'
-                }}
-              >
-                {g.icon ? (
-                  <img
-                    src={g.icon}
-                    alt={g.name}
+          {/* Compact Scrollable Server List */}
+          <div
+            style={{
+              maxHeight: '320px',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.4rem',
+              paddingRight: '0.2rem'
+            }}
+          >
+            {allowedGuilds.map((guild, index) => {
+              const isCopied = copiedId === guild.id;
+              return (
+                <div
+                  key={guild.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.55rem 0.75rem',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    borderRadius: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                    e.currentTarget.style.borderColor = 'rgba(234, 179, 8, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.3)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
+                    {guild.icon ? (
+                      <img
+                        src={guild.icon}
+                        alt={guild.name}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          objectFit: 'cover',
+                          border: '1px solid rgba(234, 179, 8, 0.3)'
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          background: 'rgba(234, 179, 8, 0.15)',
+                          border: '1px solid rgba(234, 179, 8, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          color: 'var(--gold)'
+                        }}
+                      >
+                        {guild.name.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span
+                          style={{
+                            fontSize: '0.62rem',
+                            fontWeight: 700,
+                            color: '#eab308',
+                            letterSpacing: '0.04em'
+                          }}
+                        >
+                          SERVEUR {index + 1}
+                        </span>
+                        <span style={{ fontSize: '0.6rem', color: '#22c55e' }}>●</span>
+                      </div>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          color: 'var(--text-cream)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                        title={guild.name}
+                      >
+                        {guild.name}
+                      </div>
+                      <div
+                        onClick={() => copyToClipboard(guild.id)}
+                        style={{
+                          fontSize: '0.7rem',
+                          color: 'var(--text-dark-secondary)',
+                          fontFamily: 'monospace',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          cursor: 'pointer'
+                        }}
+                        title="Cliquer pour copier l'ID"
+                      >
+                        <span>ID: {guild.id}</span>
+                        {isCopied ? <Check size={11} color="#4ade80" /> : <Copy size={11} />}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleDeleteGuild(guild.id, guild.name)}
                     style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '2px solid var(--gold)'
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      background: 'var(--bg-main)',
-                      border: '2px solid var(--gold)',
-                      color: 'var(--gold)',
+                      background: 'transparent',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      color: '#f87171',
+                      borderRadius: '6px',
+                      padding: '0.35rem',
+                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontWeight: 700,
-                      fontSize: '1.1rem'
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0
                     }}
-                  >
-                    {g.name ? g.name.substring(0, 2).toUpperCase() : 'LG'}
-                  </div>
-                )}
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-gold)', fontWeight: 600, textTransform: 'uppercase' }}>
-                      Serveur {index + 1}
-                    </span>
-                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#4ade80' }} />
-                  </div>
-
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      color: '#ffffff',
-                      fontSize: '0.96rem',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                      e.currentTarget.style.borderColor = '#ef4444';
                     }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+                    }}
+                    title="Retirer ce serveur de la whitelist"
                   >
-                    {g.name}
-                  </div>
-
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-light-muted)', fontFamily: 'monospace', marginTop: '0.15rem' }}>
-                    ID: {g.id}
-                  </div>
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => handleDeleteGuild(g.id, g.name)}
-                  className="btn"
-                  title="Retirer ce serveur"
-                  style={{
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    color: '#f87171',
-                    padding: '0.45rem',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
+              );
+            })}
 
             {allowedGuilds.length === 0 && (
-              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-light-muted)', gridColumn: '1 / -1' }}>
-                Aucun serveur autorisé configuré.
+              <div
+                style={{
+                  padding: '1.25rem',
+                  textAlign: 'center',
+                  background: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: '6px',
+                  color: 'var(--text-dark-secondary)',
+                  fontSize: '0.8rem'
+                }}
+              >
+                Aucun serveur spécifique autorisé.
               </div>
             )}
           </div>
         </div>
 
-            </>
-          )}
-
-          {activeSubTab === 'admins' && (
-            <>
-              {/* ========================================================================= */}
-              {/* SECTION 2: GESTION DES SUPER ADMINS */}
-              {/* ========================================================================= */}
-        <div className="glass-panel" style={{ padding: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
-            <Crown size={22} color="var(--gold)" />
-            <h2 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--text-gold)', fontFamily: 'var(--font-title)' }}>
-              Gestion des Super Admins
-            </h2>
-          </div>
-          <p style={{ color: 'var(--text-light-muted)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-            Les Super Admins disposent des droits globaux pour créer, modifier et supprimer les cartes de jeu ainsi que configurer les paramètres généraux. Vous êtes le seul <strong>Root Dev</strong> et pouvez nommer ou révoquer des Super Admins à tout moment sans redémarrer le serveur.
-          </p>
-
-          {/* Root Dev Card */}
+        {/* ========================================================================= */}
+        {/* COLUMN 2: GESTION DES SUPER ADMINS                                       */}
+        {/* ========================================================================= */}
+        <div
+          className="glass-panel"
+          style={{
+            padding: '1.2rem',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid rgba(168, 85, 247, 0.25)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)'
+          }}
+        >
+          {/* Card Header */}
           <div
             style={{
-              background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.12), rgba(15, 23, 42, 0.7))',
-              border: '1.5px solid rgba(201, 168, 76, 0.5)',
-              borderRadius: 'var(--radius-md)',
-              padding: '1.1rem 1.4rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '1.1rem',
-              marginBottom: '1.5rem',
-              boxShadow: '0 6px 20px rgba(0,0,0,0.3)'
+              justifyContent: 'space-between',
+              marginBottom: '0.85rem',
+              gap: '0.5rem'
             }}
           >
-            {currentUser?.avatar ? (
-              <img
-                src={currentUser.avatar}
-                alt={currentUser.username}
-                style={{
-                  width: '52px',
-                  height: '52px',
-                  borderRadius: '50%',
-                  border: '2px solid var(--gold)',
-                  boxShadow: '0 0 12px rgba(201, 168, 76, 0.4)'
-                }}
-              />
-            ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div
                 style={{
-                  width: '52px',
-                  height: '52px',
-                  borderRadius: '50%',
-                  background: 'var(--gold)',
-                  color: '#000',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: 'rgba(168, 85, 247, 0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontWeight: 800,
-                  fontSize: '1.3rem'
+                  border: '1px solid rgba(168, 85, 247, 0.3)'
                 }}
               >
-                {currentUser?.username?.substring(0, 2).toUpperCase() || 'DV'}
+                <Crown size={17} color="#c084fc" />
               </div>
-            )}
-
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                <div style={{ fontWeight: 800, color: '#ffffff', fontSize: '1.05rem' }}>
-                  {currentUser?.username}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <h2 style={{ margin: 0, fontSize: '1.05rem', color: '#e9d5ff', fontFamily: 'var(--font-title)' }}>
+                    Super Administrateurs
+                  </h2>
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      padding: '0.1rem 0.4rem',
+                      borderRadius: '4px',
+                      color: 'var(--text-cream)'
+                    }}
+                  >
+                    {1 + superAdmins.length}
+                  </span>
                 </div>
-                <span
-                  style={{
-                    background: 'var(--gold)',
-                    color: '#000',
-                    fontSize: '0.68rem',
-                    fontWeight: 800,
-                    padding: '0.15rem 0.5rem',
-                    borderRadius: '4px',
-                    letterSpacing: '0.04em'
-                  }}
-                >
-                  ROOT DEV
-                </span>
-              </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-gold)', fontFamily: 'monospace' }}>
-                ID: {currentUser?.id} • Protégé par les variables système
               </div>
             </div>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-dark-secondary)' }}>
+              Accès aux cartes & config
+            </span>
           </div>
 
-          {/* Add Super Admin Form */}
+          {/* Root Dev Compact Banner */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.55rem 0.75rem',
+              background: 'linear-gradient(90deg, rgba(168, 85, 247, 0.12) 0%, rgba(234, 179, 8, 0.08) 100%)',
+              border: '1px solid rgba(168, 85, 247, 0.35)',
+              borderRadius: '6px',
+              marginBottom: '0.85rem'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: 'rgba(168, 85, 247, 0.25)',
+                  border: '1px solid #c084fc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Crown size={15} color="#e9d5ff" />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#ffffff' }}>
+                    rachiid
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.6rem',
+                      fontWeight: 700,
+                      background: 'rgba(168, 85, 247, 0.25)',
+                      color: '#c084fc',
+                      border: '1px solid rgba(168, 85, 247, 0.4)',
+                      padding: '0.05rem 0.35rem',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    ROOT DEV
+                  </span>
+                </div>
+                <div
+                  onClick={() => copyToClipboard('548893712806182932')}
+                  style={{
+                    fontSize: '0.68rem',
+                    color: '#cbd5e1',
+                    fontFamily: 'monospace',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    cursor: 'pointer'
+                  }}
+                  title="Cliquer pour copier l'ID"
+                >
+                  <span>ID: 548893712806182932 • Système</span>
+                  {copiedId === '548893712806182932' ? <Check size={11} color="#4ade80" /> : <Copy size={11} />}
+                </div>
+              </div>
+            </div>
+            <span
+              style={{
+                fontSize: '0.68rem',
+                color: '#a855f7',
+                fontWeight: 600,
+                background: 'rgba(168, 85, 247, 0.1)',
+                padding: '0.2rem 0.45rem',
+                borderRadius: '4px'
+              }}
+            >
+              Inamovible
+            </span>
+          </div>
+
+          {/* Compact Inline Add Super Admin Form */}
           <form
             onSubmit={handleAddSuperAdmin}
             style={{
               display: 'flex',
-              gap: '0.75rem',
+              gap: '0.4rem',
               alignItems: 'center',
-              marginBottom: '1.5rem',
-              background: 'rgba(0, 0, 0, 0.25)',
-              padding: '0.75rem',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              flexWrap: 'wrap'
+              marginBottom: '0.85rem'
             }}
           >
-            <div style={{ flex: 1, minWidth: '240px' }}>
-              <input
-                type="text"
-                className="input-text"
-                placeholder="ID Discord du nouvel admin (ex: 548893712806182932)"
-                value={newUserId}
-                onChange={(e) => setNewUserId(e.target.value)}
-                disabled={isAddingAdmin}
-                style={{ width: '100%' }}
-              />
-            </div>
-
+            <input
+              type="text"
+              placeholder="ID Discord du nouvel admin (ex: 992802718735401050)"
+              value={newUserId}
+              onChange={(e) => setNewUserId(e.target.value)}
+              style={{
+                flex: 1,
+                background: 'rgba(0, 0, 0, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '6px',
+                padding: '0.45rem 0.75rem',
+                color: '#ffffff',
+                fontSize: '0.82rem',
+                outline: 'none',
+                transition: 'border-color 0.15s ease'
+              }}
+              onFocus={(e) => (e.target.style.borderColor = '#c084fc')}
+              onBlur={(e) => (e.target.style.borderColor = 'rgba(255, 255, 255, 0.12)')}
+            />
             <button
               type="submit"
-              className="btn btn-gold"
+              className="btn btn-secondary"
               disabled={isAddingAdmin || !newUserId.trim()}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.25rem' }}
+              style={{
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.8rem',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                height: '34px',
+                borderColor: 'rgba(168, 85, 247, 0.4)',
+                color: '#e9d5ff'
+              }}
             >
-              <UserCheck size={16} />
-              {isAddingAdmin ? 'Recherche Discord...' : 'Ajouter Super Admin'}
+              <Plus size={14} /> {isAddingAdmin ? 'Ajout...' : 'Ajouter'}
             </button>
           </form>
 
+          {/* Feedback message */}
           {adminMessage && (
             <div
               style={{
-                padding: '0.65rem 1rem',
-                borderRadius: 'var(--radius-sm)',
-                marginBottom: '1.25rem',
+                padding: '0.4rem 0.65rem',
+                borderRadius: '6px',
+                fontSize: '0.76rem',
+                marginBottom: '0.75rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.88rem',
-                background: adminMessage.type === 'success' ? 'rgba(74, 222, 128, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                border: `1px solid ${adminMessage.type === 'success' ? 'rgba(74, 222, 128, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                gap: '0.4rem',
+                background:
+                  adminMessage.type === 'success'
+                    ? 'rgba(34, 197, 94, 0.15)'
+                    : 'rgba(239, 68, 68, 0.15)',
+                border:
+                  adminMessage.type === 'success'
+                    ? '1px solid rgba(34, 197, 94, 0.3)'
+                    : '1px solid rgba(239, 68, 68, 0.3)',
                 color: adminMessage.type === 'success' ? '#86efac' : '#fca5a5'
               }}
             >
-              {adminMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+              {adminMessage.type === 'success' ? <CheckCircle size={13} /> : <AlertCircle size={13} />}
               <span>{adminMessage.text}</span>
             </div>
           )}
 
-          {/* List of Delegated Super Admins */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
-            {superAdmins.map((sa) => (
-              <div
-                key={sa.id}
-                style={{
-                  background: 'rgba(15, 23, 42, 0.65)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.25)'
-                }}
-              >
-                {sa.avatar ? (
-                  <img
-                    src={sa.avatar}
-                    alt={sa.username}
+          {/* Compact Scrollable Super Admins List */}
+          <div
+            style={{
+              maxHeight: '320px',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.4rem',
+              paddingRight: '0.2rem'
+            }}
+          >
+            {superAdmins.map((admin) => {
+              const isCopied = copiedId === admin.id;
+              return (
+                <div
+                  key={admin.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.55rem 0.75rem',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    borderRadius: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                    e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.3)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
+                    {admin.avatar ? (
+                      <img
+                        src={admin.avatar}
+                        alt={admin.username}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '1px solid rgba(168, 85, 247, 0.3)'
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: 'rgba(168, 85, 247, 0.15)',
+                          border: '1px solid rgba(168, 85, 247, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          color: '#c084fc'
+                        }}
+                      >
+                        {admin.username.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            fontSize: '0.85rem',
+                            color: 'var(--text-cream)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                          title={admin.username}
+                        >
+                          {admin.username}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.6rem',
+                            background: 'rgba(168, 85, 247, 0.15)',
+                            color: '#c084fc',
+                            padding: '0.05rem 0.3rem',
+                            borderRadius: '3px',
+                            fontWeight: 600
+                          }}
+                        >
+                          SUPER ADMIN
+                        </span>
+                      </div>
+                      <div
+                        onClick={() => copyToClipboard(admin.id)}
+                        style={{
+                          fontSize: '0.7rem',
+                          color: 'var(--text-dark-secondary)',
+                          fontFamily: 'monospace',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          cursor: 'pointer'
+                        }}
+                        title="Cliquer pour copier l'ID"
+                      >
+                        <span>ID: {admin.id}</span>
+                        {isCopied ? <Check size={11} color="#4ade80" /> : <Copy size={11} />}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleDeleteSuperAdmin(admin.id, admin.username)}
                     style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '1.5px solid rgba(255, 255, 255, 0.2)'
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '50%',
-                      background: 'var(--bg-main)',
-                      color: '#ffffff',
+                      background: 'transparent',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      color: '#f87171',
+                      borderRadius: '6px',
+                      padding: '0.35rem',
+                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontWeight: 700,
-                      fontSize: '1rem'
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0
                     }}
-                  >
-                    {sa.username ? sa.username.substring(0, 2).toUpperCase() : 'SA'}
-                  </div>
-                )}
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.15rem' }}>
-                    <span style={{ fontSize: '0.72rem', color: '#93c5fd', fontWeight: 600, textTransform: 'uppercase' }}>
-                      Super Admin
-                    </span>
-                  </div>
-
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      color: '#ffffff',
-                      fontSize: '0.94rem',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                      e.currentTarget.style.borderColor = '#ef4444';
                     }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+                    }}
+                    title="Révoquer ce Super Admin"
                   >
-                    {sa.username}
-                  </div>
-
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-light-muted)', fontFamily: 'monospace' }}>
-                    ID: {sa.id}
-                  </div>
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => handleDeleteSuperAdmin(sa.id, sa.username)}
-                  className="btn"
-                  title="Révoquer les droits Super Admin"
-                  style={{
-                    background: 'rgba(239, 68, 68, 0.12)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    color: '#f87171',
-                    padding: '0.45rem',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
+              );
+            })}
 
             {superAdmins.length === 0 && (
-              <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-light-muted)', gridColumn: '1 / -1', fontSize: '0.88rem' }}>
-                Aucun Super Admin supplémentaire délégué. Vous êtes le seul administrateur actif.
+              <div
+                style={{
+                  padding: '1.25rem',
+                  textAlign: 'center',
+                  background: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: '6px',
+                  color: 'var(--text-dark-secondary)',
+                  fontSize: '0.8rem'
+                }}
+              >
+                Aucun Super Admin supplémentaire délégué.
               </div>
             )}
           </div>
-        </div>
-            </>
-          )}
-
-          {/* Placeholders for in-development sections */}
-          {['general', 'game', 'messages', 'commands', 'security', 'logs', 'backup', 'tools'].includes(activeSubTab) && (
-            <div className="glass-panel" style={{ padding: '3rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: 'rgba(234, 179, 8, 0.1)',
-                color: 'var(--gold)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Wrench size={32} />
-              </div>
-              <h2 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-cream)' }}>En cours de développement</h2>
-              <p style={{ color: 'var(--text-light-muted)', maxWidth: '400px', margin: '0 auto', lineHeight: 1.5 }}>
-                Cette section sera bientôt disponible. Elle vous permettra de configurer en détail les options avancées de votre instance Loup-Garou NextGen.
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>

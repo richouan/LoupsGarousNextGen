@@ -6,7 +6,9 @@ import {
   getContactUser,
   fetchDiscordGuildInfo,
   fetchDiscordUserInfo,
-  getDevUserIds
+  getDevUserIds,
+  isWhitelistEnabled,
+  setWhitelistEnabled
 } from '../utils/allowedGuilds';
 import { authenticate } from './guilds.routes';
 import { requireDev } from '../middleware/rbac';
@@ -18,11 +20,13 @@ const router = Router();
  */
 router.get('/allowed-guilds', async (_req: Request, res: Response) => {
   try {
+    const whitelistActive = await isWhitelistEnabled();
     const allowedGuildIds = await getAllowedGuildIds();
     const allowedGuilds = await getAllowedGuildsDetails();
     const contactUser = getContactUser();
 
     return res.json({
+      isWhitelistEnabled: whitelistActive,
       allowedGuildIds,
       allowedGuilds,
       contactUser,
@@ -39,15 +43,34 @@ router.get('/allowed-guilds', async (_req: Request, res: Response) => {
  */
 router.get('/admin-settings', authenticate, requireDev, async (_req: Request, res: Response) => {
   try {
+    const whitelistActive = await isWhitelistEnabled();
     const allowedGuilds = await getAllowedGuildsDetails();
     const superAdmins = await prisma.superAdmin.findMany({ orderBy: { createdAt: 'asc' } });
     const devIds = getDevUserIds();
 
     return res.json({
+      isWhitelistEnabled: whitelistActive,
       allowedGuilds,
       superAdmins,
       devIds
     });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Dev Only: Toggle Whitelist Mode (Trusted Servers vs Public)
+ */
+router.post('/whitelist-toggle', authenticate, requireDev, async (req: Request, res: Response) => {
+  const { enabled } = req.body;
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ error: 'enabled boolean field is required' });
+  }
+
+  try {
+    const updated = await setWhitelistEnabled(enabled);
+    return res.json({ success: true, isWhitelistEnabled: updated });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

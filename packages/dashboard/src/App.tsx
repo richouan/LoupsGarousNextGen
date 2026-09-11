@@ -19,6 +19,7 @@ export function App() {
   const [channels, setChannels] = useState<any[]>([]);
   const [allowedGuilds, setAllowedGuilds] = useState<any[]>([]);
   const [contactUser, setContactUser] = useState<string>('ezreal');
+  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(() => {
     const hasToken = Boolean(getSavedToken());
@@ -36,6 +37,9 @@ export function App() {
       .then((res) => {
         if (res.data.allowedGuilds) setAllowedGuilds(res.data.allowedGuilds);
         if (res.data.contactUser) setContactUser(res.data.contactUser);
+        if (res.data.isWhitelistEnabled !== undefined) {
+          setIsWhitelistEnabled(res.data.isWhitelistEnabled);
+        }
       })
       .catch(() => {});
   }, []);
@@ -55,7 +59,8 @@ export function App() {
         userData: any,
         guildsData: any[],
         allowedGuildsData?: any[],
-        contactUserData?: string
+        contactUserData?: string,
+        whitelistStatus?: boolean
       ) => {
         setUser(userData);
         setGuilds(guildsData || []);
@@ -64,6 +69,9 @@ export function App() {
         }
         if (contactUserData) {
           setContactUser(contactUserData);
+        }
+        if (whitelistStatus !== undefined) {
+          setIsWhitelistEnabled(whitelistStatus);
         }
 
         // Restore last server if valid, or default to first server with bot
@@ -93,7 +101,7 @@ export function App() {
             return;
           }
 
-          finalizeUserSession(res.data.user, res.data.guilds, res.data.allowedGuilds, res.data.contactUser);
+          finalizeUserSession(res.data.user, res.data.guilds, res.data.allowedGuilds, res.data.contactUser, res.data.isWhitelistEnabled);
         } catch (err: any) {
           console.error('Session validation check failed:', err);
           // Only clear session if token is explicitly expired or unauthorized (401 / 403)
@@ -108,7 +116,7 @@ export function App() {
         window.history.replaceState({}, document.title, '/');
         try {
           const res = await api.get('/auth/me');
-          finalizeUserSession(res.data.user, res.data.guilds, res.data.allowedGuilds, res.data.contactUser);
+          finalizeUserSession(res.data.user, res.data.guilds, res.data.allowedGuilds, res.data.contactUser, res.data.isWhitelistEnabled);
         } catch (err: any) {
           console.error('Failed to validate url token:', err);
           if (err?.response?.status === 401 || err?.response?.status === 403) {
@@ -120,10 +128,10 @@ export function App() {
       } else if (code) {
         try {
           const callbackRes = await api.post('/auth/callback', { code });
-          const { token: receivedToken, user: receivedUser, guilds: receivedGuilds, allowedGuilds: receivedAllowed, contactUser: receivedContact } = callbackRes.data;
+          const { token: receivedToken, user: receivedUser, guilds: receivedGuilds, allowedGuilds: receivedAllowed, contactUser: receivedContact, isWhitelistEnabled: receivedWhitelist } = callbackRes.data;
           if (receivedToken) {
             saveSavedToken(receivedToken);
-            finalizeUserSession(receivedUser, receivedGuilds, receivedAllowed, receivedContact);
+            finalizeUserSession(receivedUser, receivedGuilds, receivedAllowed, receivedContact, receivedWhitelist);
           }
         } catch (err) {
           console.error('Failed to exchange code:', err);
@@ -237,6 +245,7 @@ export function App() {
         onLogin={() => window.location.href = '/api/auth/discord'}
         authLoading={authLoading}
         onBrandClick={handleBrandClick}
+        isWhitelistEnabled={isWhitelistEnabled}
       />
 
       {/* Tabs Bar */}
@@ -504,8 +513,23 @@ export function App() {
           <BotSettingsTab
             currentUser={user}
             onAllowedGuildsUpdated={(updated) => setAllowedGuilds(updated)}
+            onWhitelistToggle={(enabled) => {
+              setIsWhitelistEnabled(enabled);
+              setGuilds((prev) =>
+                prev.map((g) => ({
+                  ...g,
+                  isAllowed: !enabled ? true : allowedGuilds.some((ag) => ag.id === g.id)
+                }))
+              );
+              if (selectedGuild && selectedGuild.id !== 'global') {
+                setSelectedGuild((prev: any) => ({
+                  ...prev,
+                  isAllowed: !enabled ? true : allowedGuilds.some((ag) => ag.id === prev.id)
+                }));
+              }
+            }}
           />
-        ) : selectedGuild.id !== 'global' && selectedGuild.isAllowed === false ? (
+        ) : selectedGuild.id !== 'global' && isWhitelistEnabled && selectedGuild.isAllowed === false ? (
           <RestrictedServerView
             selectedGuild={selectedGuild}
             allowedGuilds={allowedGuilds}

@@ -29,6 +29,7 @@ interface NavbarProps {
   onLogin: () => void;
   authLoading?: boolean;
   onBrandClick?: () => void;
+  isWhitelistEnabled?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -39,7 +40,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onLogin,
   authLoading = false,
-  onBrandClick
+  onBrandClick,
+  isWhitelistEnabled = true
 }) => {
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
@@ -105,7 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {selectedGuild?.name ? selectedGuild.name.substring(0, 2).toUpperCase() : 'LG'}
                   </div>
                 )}
-                {selectedGuild && selectedGuild.isAllowed === false && (
+                {selectedGuild && isWhitelistEnabled && selectedGuild.isAllowed === false && (
                   <span
                     style={{
                       position: 'absolute',
@@ -221,13 +223,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 >
                                   {g.name}
                                 </div>
-                                {g.isAllowed === false ? (
+                                {isWhitelistEnabled && g.isAllowed === false ? (
                                   <div style={{ fontSize: '0.65rem', color: '#facc15', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                     <span>🔒 Bêta Privée</span>
                                   </div>
                                 ) : (
                                   <div style={{ fontSize: '0.65rem', color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                    <span>● Partenaire Officiel</span>
+                                    <span>● {isWhitelistEnabled ? 'Partenaire Officiel' : 'Serveur Actif'}</span>
                                   </div>
                                 )}
                               </div>

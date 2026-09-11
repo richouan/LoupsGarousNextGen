@@ -4,6 +4,7 @@ import axios from 'axios';
 const API_BASE_URL = process.env.SERVER_API_URL || 'http://localhost:3001/api';
 
 interface CachedAllowedGuilds {
+  isWhitelistEnabled: boolean;
   allowedGuildIds: string[];
   allowedGuilds: Array<{ id: string; name: string; icon: string | null }>;
   contactUser: string;
@@ -21,6 +22,7 @@ export async function syncAllowedGuildsFromBackend(): Promise<CachedAllowedGuild
   try {
     const res = await axios.get(`${API_BASE_URL}/bot/allowed-guilds`, { timeout: 3000 });
     cache = {
+      isWhitelistEnabled: res.data.isWhitelistEnabled !== false,
       allowedGuildIds: res.data.allowedGuildIds || ['1461119651021979710'],
       allowedGuilds: res.data.allowedGuilds || [],
       contactUser: res.data.contactUser || 'ezreal',
@@ -34,6 +36,7 @@ export async function syncAllowedGuildsFromBackend(): Promise<CachedAllowedGuild
       .filter(Boolean);
 
     const fallback: CachedAllowedGuilds = {
+      isWhitelistEnabled: true,
       allowedGuildIds: envIds,
       allowedGuilds: [
         {
@@ -67,6 +70,9 @@ export function isGuildAllowed(guildId: string | null | undefined): boolean {
   if (!guildId) return true;
   // Trigger background refresh if stale
   syncAllowedGuildsFromBackend().catch(() => {});
+  if (cache && cache.isWhitelistEnabled === false) {
+    return true; // Whitelist mode disabled: public access
+  }
   return getAllowedGuildIds().includes(guildId);
 }
 
