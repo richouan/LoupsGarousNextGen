@@ -1,5 +1,5 @@
 import { Interaction } from 'discord.js';
-import { buildCardEmbed, buildSecretRevealRow, buildRestrictedServerEmbed } from '../utils/embedBuilder';
+import { buildCardEmbed, buildSecretRevealRow, buildRestrictedServerEmbed, buildRolesListEmbeds } from '../utils/embedBuilder';
 import { MatchableCard } from '../services/CardMatcherService';
 import { isGuildAllowed, getResolvedAllowedGuilds, getContactUser } from '../utils/allowedGuilds';
 
@@ -176,19 +176,12 @@ export async function handleInteraction(
       return;
     }
 
-    if (commandName === 'cartes') {
+    if (commandName === 'cartes' || commandName === 'roles') {
       const cards = await getAllCardsForGuild(interaction.guildId);
-      const village = cards.filter((c) => c.camp === 'VILLAGEOIS').map((c) => `• **${c.name}**`).join('\n');
-      const loups = cards.filter((c) => c.camp === 'LOUPS').map((c) => `• **${c.name}**`).join('\n');
-      const autres = cards.filter((c) => c.camp !== 'VILLAGEOIS' && c.camp !== 'LOUPS').map((c) => `• **${c.name}**`).join('\n');
+      const embeds = buildRolesListEmbeds(cards);
 
       await interaction.reply({
-        content:
-          `📜 **Cartes Loup-Garou configurées :**\n\n` +
-          `**🛡️ Villageois :**\n${village || 'Aucun'}\n\n` +
-          `**🐺 Meute des Loups :**\n${loups || 'Aucun'}\n\n` +
-          `**⚖️ Neutres / Solitaires :**\n${autres || 'Aucun'}\n\n` +
-          `💡 *Astuce : tape directement le nom d'un rôle dans le chat pour afficher sa carte !*`,
+        embeds,
         ephemeral: true
       });
       return;

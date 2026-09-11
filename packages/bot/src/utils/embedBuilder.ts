@@ -178,4 +178,68 @@ export function buildRestrictedServerEmbed(
   return { embed, files };
 }
 
+export function categorizeCards(cards: MatchableCard[]) {
+  const loups: MatchableCard[] = [];
+  const villageois: MatchableCard[] = [];
+  const solos: MatchableCard[] = [];
 
+  for (const card of cards) {
+    if (card.isEnabled === false) continue;
+    const camp = (card.camp || '').trim().toUpperCase();
+    if (camp === 'LOUPS' || camp === 'LOUPS-GAROUS' || camp.includes('LOUP') || camp.includes('WOLF')) {
+      loups.push(card);
+    } else if (camp === 'VILLAGEOIS' || camp === 'VILLAGE' || camp.includes('VILLAG')) {
+      villageois.push(card);
+    } else {
+      solos.push(card);
+    }
+  }
+
+  const sortAlphabetical = (a: MatchableCard, b: MatchableCard) =>
+    a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
+
+  return {
+    loups: loups.sort(sortAlphabetical),
+    villageois: villageois.sort(sortAlphabetical),
+    solos: solos.sort(sortAlphabetical)
+  };
+}
+
+export function buildRolesListEmbeds(cards: MatchableCard[]): EmbedBuilder[] {
+  const { loups, villageois, solos } = categorizeCards(cards);
+
+  const loupsDesc = loups.length > 0
+    ? loups.map((c) => `• **${c.name}**`).join('\n')
+    : '*Aucun rôle configuré*';
+
+  const villageDesc = villageois.length > 0
+    ? villageois.map((c) => `• **${c.name}**`).join('\n')
+    : '*Aucun rôle configuré*';
+
+  const soloDesc = solos.length > 0
+    ? solos.map((c) => `• **${c.name}**`).join('\n')
+    : '*Aucun rôle configuré*';
+
+  // 1. Loups-Garous in Red (#ef4444)
+  const embedLoups = new EmbedBuilder()
+    .setTitle(`🐺 Loups-Garous (${loups.length})`)
+    .setColor(0xef4444)
+    .setDescription(loupsDesc);
+
+  // 2. Villageois in White Yellow (#fef08a)
+  const embedVillageois = new EmbedBuilder()
+    .setTitle(`🛡️ Villageois (${villageois.length})`)
+    .setColor(0xfef08a)
+    .setDescription(villageDesc);
+
+  // 3. Solos in Violet (#a855f7)
+  const embedSolo = new EmbedBuilder()
+    .setTitle(`🔮 Solos (${solos.length})`)
+    .setColor(0xa855f7)
+    .setDescription(soloDesc)
+    .setFooter({
+      text: "💡 Astuce : Écris le nom d'un rôle dans le salon pour afficher sa carte !"
+    });
+
+  return [embedLoups, embedVillageois, embedSolo];
+}

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import { autoReplyService } from './services/AutoReplyService';
 import { chatControlService } from './services/ChatControlService';
+import { rolesListService } from './services/RolesListService';
 import { handleInteraction } from './events/interactionCreate';
 import { MatchableCard } from './services/CardMatcherService';
 import { deployCommands } from './scripts/deployCommands';
@@ -167,7 +168,13 @@ export function createBotClient() {
       return;
     }
 
-    // 2. Process role card automatic responses
+    // 2. Check for bot mention asking for roles list (roles, roles list, all roles)
+    const rolesHandled = await rolesListService.handleMessage(message, fetchGuildConfig);
+    if (rolesHandled) {
+      return;
+    }
+
+    // 3. Process role card automatic responses
     await autoReplyService.handleMessage(message, fetchGuildConfig);
   });
 

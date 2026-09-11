@@ -26,6 +26,9 @@ export const commands = [
     .setName('cartes')
     .setDescription('Affiche la liste de tous les rôles et cartes disponibles'),
   new SlashCommandBuilder()
+    .setName('roles')
+    .setDescription('Affiche la liste de tous les rôles (Loups, Villageois, Solos)'),
+  new SlashCommandBuilder()
     .setName('ping')
     .setDescription('Vérifie le temps de réponse du bot')
 ];

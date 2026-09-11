@@ -1,7 +1,8 @@
 import { cardMatcherService, MatchableCard } from '../services/CardMatcherService';
 import { channelFilterService } from '../services/ChannelFilterService';
 import { rateLimiterService } from '../services/RateLimiterService';
-import { buildCardEmbed, buildSecretRevealRow } from '../utils/embedBuilder';
+import { buildCardEmbed, buildSecretRevealRow, buildRolesListEmbeds } from '../utils/embedBuilder';
+import { rolesListService } from '../services/RolesListService';
 
 // Sample Loup-Garou cards for verification
 const sampleCards: MatchableCard[] = [
@@ -41,6 +42,18 @@ const sampleCards: MatchableCard[] = [
     isUnique: false,
     abilityType: 'NIGHT',
     difficulty: 1,
+    isEnabled: true
+  },
+  {
+    id: 'card-4',
+    name: 'Voleur',
+    slug: 'voleur',
+    camp: 'SOLITAIRE',
+    description: 'Choisit un rôle parmi les cartes restantes.',
+    replyMode: 'BOTH',
+    isUnique: true,
+    abilityType: 'NIGHT',
+    difficulty: 3,
     isEnabled: true
   }
 ];
@@ -143,11 +156,87 @@ function runTests() {
   console.log('\n--- Test 4: Embed & Secret Reveal Button Construction ---');
 
   const embedOutput = buildCardEmbed(sampleCards[0], false);
-  assert(embedOutput.embed.data.title === '🃏 Carte : Chasseur', 'Embed title formatted correctly');
+  assert(embedOutput.embed.data.title === 'Chasseur', 'Embed title matches card name');
   assert(embedOutput.embed.data.color === 0x3b82f6, 'Embed color matches Villageois blue');
 
   const row = buildSecretRevealRow('card-1', 'Chasseur');
-  assert(row.components.length === 1, 'Secret button row created');
+  assert(row.components.length === 2, 'Secret button row created with reveal and website buttons');
+
+  // --- 5. Roles List (Mention & 3 Embeds) Tests ---
+  console.log('\n--- Test 5: Roles List Query Detection & 3 Colored Embeds ---');
+
+  const botId = '999999999999999999';
+  const mockClient = { user: { id: botId } } as any;
+
+  function createMockMessage(content: string, isMentioned: boolean, isGuild = true) {
+    return {
+      content,
+      guild: isGuild ? { id: 'guild-1' } : null,
+      client: mockClient,
+      author: { bot: false, id: 'user-1' },
+      system: false,
+      mentions: {
+        users: {
+          has: (id: string) => isMentioned && id === botId
+        }
+      }
+    } as any;
+  }
+
+  assert(
+    rolesListService.isRolesListRequest(createMockMessage(`<@${botId}> roles`, true)),
+    'Matches "@bot roles"'
+  );
+  assert(
+    rolesListService.isRolesListRequest(createMockMessage(`<@!${botId}> roles list`, true)),
+    'Matches "@bot roles list"'
+  );
+  assert(
+    rolesListService.isRolesListRequest(createMockMessage(`<@${botId}> all roles`, true)),
+    'Matches "@bot all roles"'
+  );
+  assert(
+    rolesListService.isRolesListRequest(createMockMessage(`<@${botId}> : roles`, true)),
+    'Matches "@bot : roles"'
+  );
+  assert(
+    rolesListService.isRolesListRequest(createMockMessage(`<@${botId}> : all roles`, true)),
+    'Matches "@bot : all roles"'
+  );
+  assert(
+    rolesListService.isRolesListRequest(createMockMessage(`roles <@${botId}>`, true)),
+    'Matches "roles @bot"'
+  );
+  assert(
+    rolesListService.isRolesListRequest(createMockMessage(`roles`, false, false)),
+    'Matches "roles" in DM without mention'
+  );
+  assert(
+    !rolesListService.isRolesListRequest(createMockMessage(`roles`, false, true)),
+    'Rejects "roles" in guild without mention'
+  );
+  assert(
+    !rolesListService.isRolesListRequest(createMockMessage(`<@${botId}> hello bot`, true)),
+    'Rejects unrelated question "@bot hello bot"'
+  );
+
+  // Test 3 Embeds generation: Loups in Red, Villageois in White-Yellow, Solos in Violet
+  const roleEmbeds = buildRolesListEmbeds(sampleCards);
+  assert(roleEmbeds.length === 3, 'Generates exactly 3 embeds');
+
+  const [loupsEmbed, villageEmbed, soloEmbed] = roleEmbeds;
+
+  assert(loupsEmbed.data.color === 0xef4444, 'Loups-Garous embed is RED (0xef4444)');
+  assert(Boolean(loupsEmbed.data.title?.includes('Loups-Garous')), 'Loups embed has Loups-Garous title');
+  assert(Boolean(loupsEmbed.data.description?.includes('Loup-Garou')), 'Loups embed lists Loup-Garou');
+
+  assert(villageEmbed.data.color === 0xfef08a, 'Villageois embed is WHITE-YELLOW (0xfef08a)');
+  assert(Boolean(villageEmbed.data.title?.includes('Villageois')), 'Villageois embed has Villageois title');
+  assert(Boolean(villageEmbed.data.description?.includes('Chasseur') && villageEmbed.data.description?.includes('Sorcière')), 'Villageois embed lists Chasseur and Sorcière');
+
+  assert(soloEmbed.data.color === 0xa855f7, 'Solos embed is VIOLET (0xa855f7)');
+  assert(Boolean(soloEmbed.data.title?.includes('Solos')), 'Solos embed has Solos title');
+  assert(Boolean(soloEmbed.data.description?.includes('Voleur')), 'Solos embed lists Voleur');
 
   console.log(`\n🐺 Results: ${passed}/${total} tests passed!`);
   if (passed === total) {
@@ -158,3 +247,4 @@ function runTests() {
 }
 
 runTests();
+
