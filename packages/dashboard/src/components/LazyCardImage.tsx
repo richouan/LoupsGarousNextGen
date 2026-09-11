@@ -59,12 +59,28 @@ export const LazyCardImage: React.FC<LazyCardImageProps> = ({
     <div ref={containerRef} className={`lazy-image-container ${className}`}>
       {(!isLoaded || hasError) && (
         <div className="lazy-image-skeleton">
-          <div className="lazy-image-loader-wrap">
-            <span className="lazy-image-emoji">
-              {hasError ? '⚠️' : '🌕'}
-            </span>
-            {!hasError && <div className="lazy-image-pulse-ring" />}
-          </div>
+          {hasError ? (
+            <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+          ) : (
+            <svg className="lazy-circular-spinner" viewBox="0 0 50 50" aria-label="Loading...">
+              <circle
+                className="lazy-spinner-track"
+                cx="25"
+                cy="25"
+                r="18"
+                fill="none"
+                strokeWidth="3.5"
+              />
+              <circle
+                className="lazy-spinner-path"
+                cx="25"
+                cy="25"
+                r="18"
+                fill="none"
+                strokeWidth="3.5"
+              />
+            </svg>
+          )}
         </div>
       )}
 
