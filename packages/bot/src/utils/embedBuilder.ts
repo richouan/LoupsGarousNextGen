@@ -11,47 +11,69 @@ import fs from 'fs';
 import { MatchableCard } from '../services/CardMatcherService';
 
 export const CAMP_COLORS: Record<string, ColorResolvable> = {
-  VILLAGEOIS: 0x3b82f6, // Blue
-  LOUPS: 0xdc2626,      // Red
-  SOLITAIRE: 0x8b5cf6,  // Purple
+  VILLAGEOIS: 0x3b82f6, // Royal Village Blue
+  LOUPS: 0xdc2626,      // Wolf Red
+  SOLITAIRE: 0x8b5cf6,  // Solitaire Violet / Purple
 };
 
 export const CAMP_NAMES: Record<string, string> = {
-  VILLAGEOIS: '🛡️ Camp du Village (Innocents)',
-  LOUPS: '🐺 Meute des Loups-Garous',
-  SOLITAIRE: '🔮 Joueur Solitaire',
+  VILLAGEOIS: '🛡️ قروي',
+  LOUPS: '🐺 ذئب',
+  SOLITAIRE: '🔮 منفرد',
+  NEUTRE: '⚖️ محايد'
 };
 
-export function buildCardEmbed(card: MatchableCard, isEphemeral = false): { embed: EmbedBuilder; files: AttachmentBuilder[]; imageUrlContent?: string } {
-  const color = CAMP_COLORS[card.camp] || 0x4f46e5;
+export interface EmbedRequester {
+  username: string;
+  avatarURL?: string;
+}
+
+export function buildCardEmbed(
+  card: MatchableCard,
+  isEphemeral = false,
+  requester?: EmbedRequester
+): { embed: EmbedBuilder; files: AttachmentBuilder[]; imageUrlContent?: string } {
+  const color = CAMP_COLORS[card.camp] || 0x3b82f6;
   const campLabel = CAMP_NAMES[card.camp] || card.camp;
 
-  const difficultyStars = '★'.repeat(card.difficulty || 1);
-  const abilityLabel = card.abilityType === 'NIGHT' ? '🌙 Pouvoir de Nuit' : card.abilityType === 'DAY' ? '☀️ Pouvoir de Jour' : '❌ Aucun pouvoir';
-  const quantityLabel = card.isUnique ? '👑 Carte Unique' : '🔄 Rôle Multiple';
+  const stars = '★'.repeat(Math.min(5, Math.max(1, card.difficulty || 1)));
+  const abilityLabel = card.abilityType === 'NIGHT'
+    ? '🌙 ليلية'
+    : card.abilityType === 'DAY'
+    ? '☀️ نهارية'
+    : card.abilityType === 'PASSIVE'
+    ? '✨ دائمة'
+    : '❌ بدون';
+
+  let descriptionContent =
+    `**المجموعة :** ${campLabel}\n` +
+    `**الصعوبة :** ${stars}\n` +
+    `**القدرة :** ${abilityLabel}`;
+
+  if (card.shortDescription && card.shortDescription.trim()) {
+    descriptionContent += `\n\n⚡ **شرح مختصر :**\n${card.shortDescription.trim()}`;
+  }
+
+  if (card.description && card.description.trim()) {
+    descriptionContent += `\n\n📜 **شرح مفصل :**\n${card.description.trim()}`;
+  }
 
   const embed = new EmbedBuilder()
-    .setTitle(`🃏 Carte : ${card.name}`)
+    .setTitle(`🃏 ${card.name}`)
     .setColor(color)
-    .setDescription(
-      `**Allégeance :** ${campLabel}\n` +
-      `**Propriétés :** ${difficultyStars} | ${quantityLabel} | ${abilityLabel}\n\n` +
-      `**📜 Description & Pouvoir :**\n${card.description}`
-    )
-    .setFooter({
-      text: isEphemeral
-        ? '👁️ Révélation Secrète • Visible uniquement par toi'
-        : '🌙 Loup-Garou 2026'
-    })
-    .setTimestamp();
+    .setDescription(descriptionContent);
 
-  if (card.shortDescription) {
-    embed.addFields({
-      name: '⚡ Résumé rapide',
-      value: card.shortDescription,
-      inline: false
+  if (requester?.username) {
+    embed.setFooter({
+      text: `Requested by ${requester.username}${isEphemeral ? ' • 👁️ Secret' : ''}`,
+      iconURL: requester.avatarURL
+    });
+  } else {
+    embed.setFooter({
+      text: isEphemeral ? '👁️ Révélation Secrète' : '🌙 Loup-Garou 2026'
     });
   }
+  embed.setTimestamp();
 
   const files: AttachmentBuilder[] = [];
 

@@ -129,7 +129,11 @@ export class AutoReplyService {
       });
     } else {
       // BOTH / Rich Embed + Artwork simultaneously in same message
-      const { embed, files } = buildCardEmbed(card, false);
+      const requester = {
+        username: message.author.displayName || message.author.username,
+        avatarURL: message.author.displayAvatarURL()
+      };
+      const { embed, files } = buildCardEmbed(card, false, requester);
       replyPromise = message.channel.isTextBased()
         ? (message.channel as any).send({
             embeds: [embed],
@@ -174,7 +178,11 @@ export class AutoReplyService {
       });
     } else {
       // BOTH / Rich Embed + Artwork simultaneously in same message
-      const { embed, files } = buildCardEmbed(card, true);
+      const requester = {
+        username: message.author.displayName || message.author.username,
+        avatarURL: message.author.displayAvatarURL()
+      };
+      const { embed, files } = buildCardEmbed(card, true, requester);
       await message.author.send({
         embeds: [embed],
         files

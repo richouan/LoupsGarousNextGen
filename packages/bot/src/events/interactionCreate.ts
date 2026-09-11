@@ -21,7 +21,11 @@ export async function handleInteraction(
         return;
       }
 
-      const { embed, files } = buildCardEmbed(card, true);
+      const requester = {
+        username: interaction.user.displayName || interaction.user.username,
+        avatarURL: interaction.user.displayAvatarURL()
+      };
+      const { embed, files } = buildCardEmbed(card, true, requester);
       const row = buildSecretRevealRow(card.id, card.name);
 
       await interaction.reply({
@@ -57,7 +61,11 @@ export async function handleInteraction(
       }
 
       const isSecret = interaction.options.getBoolean('secret') ?? false;
-      const { embed, files } = buildCardEmbed(card, isSecret);
+      const requester = {
+        username: interaction.user.displayName || interaction.user.username,
+        avatarURL: interaction.user.displayAvatarURL()
+      };
+      const { embed, files } = buildCardEmbed(card, isSecret, requester);
 
       await interaction.reply({
         embeds: [embed],
