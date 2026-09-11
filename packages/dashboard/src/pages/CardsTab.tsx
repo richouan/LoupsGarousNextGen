@@ -25,8 +25,8 @@ interface CardsTabProps {
 }
 
 const campLabels: Record<string, string> = {
-  VILLAGEOIS: 'Village',
-  LOUPS: 'Wolves',
+  VILLAGEOIS: 'Villageois',
+  LOUPS: 'Loup Garou',
   SOLITAIRE: 'Solo'
 };
 
@@ -250,8 +250,8 @@ export const CardsTab: React.FC<CardsTabProps> = ({
           <div className="segmented-control" style={{ width: '100%', display: 'flex' }}>
             {[
               { id: 'ALL', label: 'All', count: counts.ALL },
-              { id: 'VILLAGEOIS', label: <><Shield size={14} style={{ verticalAlign: 'middle', marginRight: '4px', marginBottom: '2px' }}/> Village</>, count: counts.VILLAGEOIS },
-              { id: 'LOUPS', label: <><PawPrint size={14} style={{ verticalAlign: 'middle', marginRight: '4px', marginBottom: '2px' }}/> Wolves</>, count: counts.LOUPS },
+              { id: 'VILLAGEOIS', label: <><Shield size={14} style={{ verticalAlign: 'middle', marginRight: '4px', marginBottom: '2px' }}/> Villageois</>, count: counts.VILLAGEOIS },
+              { id: 'LOUPS', label: <><PawPrint size={14} style={{ verticalAlign: 'middle', marginRight: '4px', marginBottom: '2px' }}/> Loup Garou</>, count: counts.LOUPS },
               { id: 'SOLITAIRE', label: <><Eye size={14} style={{ verticalAlign: 'middle', marginRight: '4px', marginBottom: '2px' }}/> Solo</>, count: counts.SOLITAIRE }
             ].map((item) => (
               <button
@@ -347,7 +347,7 @@ export const CardsTab: React.FC<CardsTabProps> = ({
               {/* Footer */}
               <div className="card-footer">
                 <div className="card-role-name" title={card.name}>{card.name}</div>
-                <div className="card-camp-label">
+                <div className={`card-camp-label camp-${(card.camp || '').toLowerCase()}`}>
                   {campLabels[card.camp] || card.camp}
                 </div>
               </div>

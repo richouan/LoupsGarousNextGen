@@ -585,8 +585,36 @@ li {
 .role-card-compact .card-camp-label {
   font-family: var(--font-body);
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.role-card-compact .card-camp-label.camp-loups,
+.card-camp-label.camp-loups,
+.camp-label.camp-loups {
+  color: #f87171 !important;
+  text-shadow: 0 0 10px rgba(248, 113, 113, 0.4);
+}
+
+.role-card-compact .card-camp-label.camp-solitaire,
+.role-card-compact .card-camp-label.camp-solo,
+.card-camp-label.camp-solitaire,
+.card-camp-label.camp-solo,
+.camp-label.camp-solitaire,
+.camp-label.camp-solo {
+  color: #c084fc !important;
+  text-shadow: 0 0 10px rgba(192, 132, 252, 0.4);
+}
+
+.role-card-compact .card-camp-label.camp-villageois,
+.role-card-compact .card-camp-label.camp-village,
+.card-camp-label.camp-villageois,
+.card-camp-label.camp-village,
+.camp-label.camp-villageois,
+.camp-label.camp-village {
+  color: #fef08a !important;
+  text-shadow: 0 0 10px rgba(254, 240, 138, 0.35);
 }
 
 .role-card-compact .card-hover-stats {

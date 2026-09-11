@@ -277,9 +277,8 @@ export const CardEditor: React.FC<CardEditorProps> = ({
               )}
             </div>
             <div className="card-preview-footer">
-              <h3 className="fantasy-font">{name || 'Nom du rôle'}</h3>
-              <p className="camp-label">
-                {camp === 'VILLAGEOIS' ? '🛡️ Village' : camp === 'LOUPS' ? '🐺 Loups-Garous' : '🔮 Solitaire'}
+              <p className={`camp-label camp-${(camp || '').toLowerCase()}`}>
+                {camp === 'VILLAGEOIS' ? '🛡️ Villageois' : camp === 'LOUPS' ? '🐺 Loup Garou' : '🔮 Solo'}
               </p>
             </div>
           </div>
@@ -304,8 +303,8 @@ export const CardEditor: React.FC<CardEditorProps> = ({
               <div className="form-group">
                 <label className="form-label">Camp / Faction *</label>
                 <div className="segmented-control">
-                  <button type="button" className={camp === 'VILLAGEOIS' ? 'active-village' : ''} onClick={() => setCamp('VILLAGEOIS')}><span><Shield size={14} style={{ marginRight: '4px', verticalAlign: 'middle', marginBottom: '2px' }} /> Village</span></button>
-                  <button type="button" className={camp === 'LOUPS' ? 'active-loups' : ''} onClick={() => setCamp('LOUPS')}><span><PawPrint size={14} style={{ marginRight: '4px', verticalAlign: 'middle', marginBottom: '2px' }} /> Loups</span></button>
+                  <button type="button" className={camp === 'VILLAGEOIS' ? 'active-village' : ''} onClick={() => setCamp('VILLAGEOIS')}><span><Shield size={14} style={{ marginRight: '4px', verticalAlign: 'middle', marginBottom: '2px' }} /> Villageois</span></button>
+                  <button type="button" className={camp === 'LOUPS' ? 'active-loups' : ''} onClick={() => setCamp('LOUPS')}><span><PawPrint size={14} style={{ marginRight: '4px', verticalAlign: 'middle', marginBottom: '2px' }} /> Loup Garou</span></button>
                   <button type="button" className={camp === 'SOLITAIRE' ? 'active-solo' : ''} onClick={() => setCamp('SOLITAIRE')}><span><Eye size={14} style={{ marginRight: '4px', verticalAlign: 'middle', marginBottom: '2px' }} /> Solo</span></button>
                 </div>
               </div>
