@@ -58,17 +58,16 @@ export async function handleInteraction(
         return;
       }
 
-      const isSecret = interaction.options.getBoolean('secret') ?? false;
       const requester = {
         username: interaction.user.displayName || interaction.user.username,
         avatarURL: interaction.user.displayAvatarURL()
       };
-      const { embed, files } = buildCardEmbed(card, isSecret, requester);
+      const { embed, files } = buildCardEmbed(card, true, requester);
 
       await interaction.reply({
         embeds: [embed],
         files,
-        ephemeral: isSecret
+        ephemeral: true
       });
       return;
     }

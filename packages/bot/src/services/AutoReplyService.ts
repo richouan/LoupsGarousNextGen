@@ -221,7 +221,7 @@ export class AutoReplyService {
   ): Promise<void> {
     // Option B Implementation: Tell user to use slash command
     const sentMessage = await message.reply({
-      content: `⚠️ Pour afficher la carte **${card.name}** en secret, veuillez utiliser la commande : \`/carte nom:${card.name} secret:True\``
+      content: `⚠️ Pour afficher la carte **${card.name}** en secret, veuillez utiliser la commande : \`/carte nom:${card.name}\``
     });
 
     // We can also try to delete their original plain text message so it's not spamming the chat

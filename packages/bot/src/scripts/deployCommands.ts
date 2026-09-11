@@ -6,18 +6,12 @@ dotenv.config();
 export const commands = [
   new SlashCommandBuilder()
     .setName('carte')
-    .setDescription('Affiche la fiche complète et les règles d’un rôle')
+    .setDescription('Affiche la fiche complète et les règles d’un rôle en secret')
     .addStringOption((option) =>
       option
         .setName('nom')
         .setDescription('Nom du rôle (ex: Chasseur, Voyante, Sorcière)')
         .setRequired(true)
-    )
-    .addBooleanOption((option) =>
-      option
-        .setName('secret')
-        .setDescription('Afficher en secret uniquement pour toi (éphémère)')
-        .setRequired(false)
     ),
   new SlashCommandBuilder()
     .setName('cartes')
