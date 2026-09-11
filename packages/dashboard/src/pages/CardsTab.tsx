@@ -315,7 +315,6 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                   <LazyCardImage
                     src={getOptimizedImageUrl(card.imageUrl, 'thumb')}
                     alt={card.name}
-                    placeholderEmoji={campEmoji[card.camp]}
                     priority={index < 12} // First 2-3 rows load immediately, others as you scroll
                   />
                 ) : (
@@ -371,7 +370,6 @@ export const CardsTab: React.FC<CardsTabProps> = ({
                   <LazyCardImage
                     src={getOptimizedImageUrl(card.imageUrl, 'medium')}
                     alt={card.name}
-                    placeholderEmoji={campEmoji[card.camp]}
                     priority={index < 6} // First 2-3 rows load immediately, others as you scroll
                   />
                 ) : (

@@ -59,9 +59,12 @@ export const LazyCardImage: React.FC<LazyCardImageProps> = ({
     <div ref={containerRef} className={`lazy-image-container ${className}`}>
       {(!isLoaded || hasError) && (
         <div className="lazy-image-skeleton">
-          <span className="lazy-image-emoji">
-            {hasError ? '⚠️' : placeholderEmoji}
-          </span>
+          <div className="lazy-image-loader-wrap">
+            <span className="lazy-image-emoji">
+              {hasError ? '⚠️' : '🌕'}
+            </span>
+            {!hasError && <div className="lazy-image-pulse-ring" />}
+          </div>
         </div>
       )}
 
