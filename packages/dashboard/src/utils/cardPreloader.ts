@@ -73,7 +73,14 @@ export function startSequentialCardPreload(cards: any[], initialPriorityCount: n
     if (currentSession !== activePreloadSessionId) return;
 
     let index = 0;
-    const concurrency = 2; // 2 smooth parallel background streams
+    const concurrency = 2;
+    const scheduleNext = (cb: () => void) => {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(cb, { timeout: 300 });
+      } else {
+        setTimeout(cb, 60);
+      }
+    };
 
     const worker = () => {
       if (currentSession !== activePreloadSessionId) return;
@@ -81,7 +88,7 @@ export function startSequentialCardPreload(cards: any[], initialPriorityCount: n
 
       const nextUrl = backgroundUrls[index++];
       preloadSingleUrl(nextUrl).then(() => {
-        worker();
+        scheduleNext(worker);
       });
     };
 

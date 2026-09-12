@@ -83,14 +83,14 @@ export const CardsTab: React.FC<CardsTabProps> = ({
     return result;
   }, [cards, search, campFilter, sortBy]);
 
-  // Progressive row reveal (2 rows initial, more revealed as user scrolls or emerges from fog)
-  const initialBatch = viewMode === 'compact' ? 8 : 4;
+  // Progressive row reveal (2 full rows initial = 12 cards on desktop, more revealed as user scrolls)
+  const initialBatch = viewMode === 'compact' ? 12 : 6;
   const [visibleCount, setVisibleCount] = useState(initialBatch);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Reset count whenever filters or viewMode change
   useEffect(() => {
-    setVisibleCount(viewMode === 'compact' ? 8 : 4);
+    setVisibleCount(viewMode === 'compact' ? 12 : 6);
   }, [search, campFilter, sortBy, viewMode]);
 
   const handleRevealMore = () => {

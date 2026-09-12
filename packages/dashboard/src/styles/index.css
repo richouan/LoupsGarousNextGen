@@ -564,10 +564,14 @@ li {
   display: flex;
   flex-direction: column;
   animation: emergeFromFog 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  content-visibility: auto;
+  contain-intrinsic-size: 180px 250px;
 }
 
 .role-card-medium {
   animation: emergeFromFog 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  content-visibility: auto;
+  contain-intrinsic-size: 280px 220px;
 }
 
 @keyframes emergeFromFog {
@@ -595,12 +599,6 @@ li {
   background: var(--bg-dark);
   overflow: hidden;
   position: relative;
-  /* Fix hardware acceleration bleed bugs in Chrome */
-  -webkit-backface-visibility: hidden;
-  -moz-backface-visibility: hidden;
-  -webkit-transform: translate3d(0, 0, 0);
-  -moz-transform: translate3d(0, 0, 0);
-  transform: translateZ(0);
 }
 
 .lazy-image-container {

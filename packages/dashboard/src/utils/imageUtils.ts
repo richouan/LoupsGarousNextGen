@@ -22,9 +22,10 @@ export function getOptimizedImageUrl(
     return url;
   }
 
-  // Unified high-DPI HD format (800px wide, WebP/AVIF auto, best visual fidelity quality).
-  // Using the same URL across the grid and editor ensures the browser instantly pulls
-  // the image from cache with 0ms load time when opening a role!
-  const transform = 'f_auto,q_auto:best,w_800,c_limit';
+  // Smart responsive sizing:
+  // - Thumbnails in grid (180px): w_420 (over 2x Retina sharpness, 75% less GPU/RAM memory, butter-smooth on low-end PCs)
+  // - Previews & Editor: w_850 (crystal clear full HD)
+  const width = size === 'thumb' ? 420 : 850;
+  const transform = `f_auto,q_auto:best,w_${width},c_limit`;
   return url.replace('/image/upload/', `/image/upload/${transform}/`);
 }
