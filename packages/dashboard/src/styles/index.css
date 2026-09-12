@@ -1539,6 +1539,44 @@ li {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
+/* Form validation error highlights */
+.form-control.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25), 0 0 12px rgba(239, 68, 68, 0.2) !important;
+  animation: shakeInput 0.35s ease-in-out;
+}
+
+@keyframes shakeInput {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
+.form-error-hint {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ef4444;
+  margin-top: 0.35rem;
+}
+
+.editor-validation-alert {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+  padding: 0.75rem 1.2rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15);
+  animation: fadeIn 0.3s ease;
+}
+
 /* Editor form responsive rows */
 .form-row-2 {
   display: grid;

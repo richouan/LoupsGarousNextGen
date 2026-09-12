@@ -30,6 +30,8 @@ export const CardEditor: React.FC<CardEditorProps> = ({
   const [uploading, setUploading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [deleteStep, setDeleteStep] = useState(0);
+  const [errors, setErrors] = useState<{ name?: boolean; description?: boolean }>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Scroll to top of the page when editor opens
@@ -86,6 +88,8 @@ export const CardEditor: React.FC<CardEditorProps> = ({
   };
 
   const handleReset = () => {
+    setErrors({});
+    setErrorMessage(null);
     if (initialCard) {
       setName(initialCard.name || '');
       setCamp(initialCard.camp || 'VILLAGEOIS');
@@ -109,10 +113,21 @@ export const CardEditor: React.FC<CardEditorProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !description.trim()) return;
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
 
+    const newErrors: { name?: boolean; description?: boolean } = {};
+    if (!name.trim()) newErrors.name = true;
+    if (!description.trim()) newErrors.description = true;
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setErrorMessage('Veuillez remplir les champs obligatoires encadrés en rouge.');
+      return;
+    }
+
+    setErrors({});
+    setErrorMessage(null);
     setLoading(true);
     try {
       await onSave({
@@ -129,6 +144,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
       });
     } catch (err) {
       console.error('Failed to save card:', err);
+      setErrorMessage('Échec de la sauvegarde. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
@@ -286,18 +302,30 @@ export const CardEditor: React.FC<CardEditorProps> = ({
 
         {/* Right Side: Form */}
         <div className="editor-form-pane dark-form">
+          {errorMessage && (
+            <div className="editor-validation-alert">
+              <span>⚠️ {errorMessage}</span>
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <div className="form-row-2">
               <div className="form-group">
                 <label className="form-label">Role Name *</label>
                 <input
                   type="text"
-                  className="form-control"
+                  className={`form-control ${errors.name ? 'input-error' : ''}`}
                   placeholder="e.g. Chasseur, Seer..."
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (errors.name) setErrors((prev) => ({ ...prev, name: false }));
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   required
                 />
+                {errors.name && (
+                  <span className="form-error-hint">⚠️ Le nom du rôle est obligatoire</span>
+                )}
               </div>
 
               <div className="form-group">
@@ -358,14 +386,21 @@ export const CardEditor: React.FC<CardEditorProps> = ({
             <div className="form-group">
               <label className="form-label">Full Description & Rules *</label>
               <textarea
-                className="form-control"
+                className={`form-control ${errors.description ? 'input-error' : ''}`}
                 rows={5}
                 placeholder="Detailed rules, night actions, win conditions..."
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  if (errors.description) setErrors((prev) => ({ ...prev, description: false }));
+                  if (errorMessage) setErrorMessage(null);
+                }}
                 required
                 style={{ resize: 'vertical' }}
               />
+              {errors.description && (
+                <span className="form-error-hint">⚠️ La description et les règles sont obligatoires</span>
+              )}
             </div>
 
           </form>
