@@ -283,7 +283,7 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
             <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Live Partie & Gestion des Joueurs</h1>
           </div>
           <p style={{ color: 'var(--text-light-muted)', fontSize: '0.92rem', margin: 0 }}>
-            Détection vocale en direct sur <strong>{selectedGuild.name}</strong>, attribution des numéros (<code>01</code>, <code>0000</code>) et renommage automatique en 1 clic.
+            Détection vocale en direct sur <strong>{selectedGuild.name}</strong>.
           </p>
         </div>
 
@@ -482,7 +482,7 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
           </span>
         </div>
         <p style={{ margin: '0 0 0.85rem 0', fontSize: '0.83rem', color: 'var(--text-light-muted)' }}>
-          Entrez l'identifiant Discord (User ID) d'un joueur qui va bientôt rejoindre le salon vocal. Le bot lui réservera sa place et son numéro automatiquement dès son arrivée.
+          Entrez l'ID Discord du joueur. Le bot lui réservera sa place dès son arrivée.
         </p>
 
         <form onSubmit={handleAddAfterJoiner} style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -687,8 +687,8 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.75rem',
-        padding: '1rem',
+        gap: '0.4rem',
+        padding: '0.65rem',
         borderRadius: 'var(--radius-md)',
         background: isNarrator
           ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(20, 16, 25, 0.85) 100%)'
@@ -701,35 +701,27 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
         position: 'relative'
       }}
     >
-      {/* Top row: Number Badge + Avatar + Names + Voice status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        {/* Large Number Badge */}
-        <div
-          className={`live-number-badge ${isNarrator ? 'gold' : isPlayer ? 'blue' : 'muted'}`}
-          title={isNarrator ? 'Préfixe Narrateur' : 'Numéro du Joueur'}
-        >
-          {numberDisplay}
-        </div>
-
+      {/* Top row: Avatar & Names */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         {/* Avatar with Voice indicators */}
-        <div style={{ position: 'relative', width: '42px', height: '42px' }}>
+        <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
           {p.avatar ? (
             <img
               src={p.avatar}
               alt={p.displayName}
-              style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
+              style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
             />
           ) : (
             <div
               style={{
-                width: '42px',
-                height: '42px',
+                width: '36px',
+                height: '36px',
                 borderRadius: '50%',
                 background: 'var(--bg-dark)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '1rem',
+                fontSize: '0.9rem',
                 color: 'var(--text-cream)',
                 border: '1px solid var(--border-dark)'
               }}
@@ -737,30 +729,29 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
               {p.displayName.substring(0, 2).toUpperCase()}
             </div>
           )}
-
-          {/* Voice status micro-badge */}
           <span
             className={`live-voice-dot ${p.isInVoice ? 'online' : 'waiting'}`}
-            title={p.isInVoice ? 'Connecté en vocal' : 'En attente de connexion'}
+            title={p.isInVoice ? 'En vocal' : 'En attente'}
+            style={{ width: '14px', height: '14px' }}
           >
             {p.isInVoice ? (
               p.isMute ? (
-                <MicOff size={10} color="#f87171" />
+                <MicOff size={8} color="#f87171" />
               ) : (
-                <Mic size={10} color="#4ade80" />
+                <Mic size={8} color="#4ade80" />
               )
             ) : (
-              <Clock size={10} color="#c084fc" />
+              <Clock size={8} color="#c084fc" />
             )}
           </span>
         </div>
 
         {/* Names */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
           <div
             style={{
               fontWeight: 600,
-              fontSize: '0.92rem',
+              fontSize: '0.85rem',
               color: 'var(--text-cream)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -770,94 +761,84 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
           >
             {p.displayName}
           </div>
-
           <div
             style={{
-              fontSize: '0.78rem',
+              fontSize: '0.72rem',
               color: isNarrator ? 'var(--gold)' : isPlayer ? '#93c5fd' : 'var(--text-light-muted)',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.35rem'
+              gap: '0.2rem'
             }}
           >
-            <span>➔ {p.targetNick}</span>
+            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={p.targetNick}>
+              ➔ {p.targetNick}
+            </span>
             <button
               type="button"
               onClick={() => onCopy(p.targetNick, p.id)}
               style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', opacity: 0.7 }}
-              title="Copier le pseudo"
+              title="Copier"
             >
-              {isCopied ? <Check size={12} color="#4ade80" /> : <Copy size={12} />}
+              {isCopied ? <Check size={10} color="#4ade80" /> : <Copy size={10} />}
             </button>
+            {p.renameStatus === 'SUCCESS' && <span title="Renommé"><CheckCircle2 size={10} color="#4ade80" /></span>}
+            {p.renameStatus === 'SKIPPED_HIERARCHY' && <span title="Rôle supérieur"><AlertTriangle size={10} color="#fbbf24" /></span>}
+            {p.renameStatus === 'ERROR' && <span title="Erreur"><AlertTriangle size={10} color="#f87171" /></span>}
           </div>
         </div>
-
-        {/* Delete / Kick button */}
-        <button
-          type="button"
-          onClick={() => onRemove(p.id)}
-          className="live-delete-btn"
-          title="Retirer de la partie"
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
-
-      {/* Middle row: Status badge */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem', fontSize: '0.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          {p.renameStatus === 'SUCCESS' && (
-            <span style={{ color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <CheckCircle2 size={13} /> Renommé sur Discord
-            </span>
-          )}
-          {p.renameStatus === 'SKIPPED_HIERARCHY' && (
-            <span
-              style={{ color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-              title="Le bot ne peut pas renommer ce membre car son rôle Discord est supérieur ou il est propriétaire du serveur."
-            >
-              <AlertTriangle size={13} /> Rôle supérieur (manuel)
-            </span>
-          )}
-          {p.renameStatus === 'IDLE' && (
-            <span style={{ color: 'var(--text-light-muted)' }}>
-              {p.isInVoice ? 'Prêt à renommer' : '⏳ En attente de connexion'}
-            </span>
-          )}
-          {p.renameStatus === 'ERROR' && (
-            <span style={{ color: '#f87171' }}>
-              Erreur: {p.renameError || 'Échec du renommage'}
-            </span>
-          )}
-        </div>
-
-        {/* Number input for Players */}
-        {isPlayer && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-            <span style={{ color: 'var(--text-muted)' }}>N° :</span>
+        
+        {/* Number Display & Delete (Top Right) */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'flex-end', 
+          gap: '0.2rem' 
+        }}>
+          {isPlayer ? (
             <input
               type="number"
               min="1"
               max="99"
               value={p.number || ''}
               onChange={(e) => onUpdateNumber(p.id, e.target.value ? Number(e.target.value) : null)}
+              className="live-number-badge blue"
               style={{
-                width: '46px',
-                padding: '2px 4px',
-                fontSize: '0.78rem',
+                width: '32px',
+                height: '24px',
+                padding: '0',
+                fontSize: '0.85rem',
                 textAlign: 'center',
-                background: 'var(--bg-dark)',
-                border: '1px solid var(--border-dark)',
+                border: '1px solid rgba(96, 165, 250, 0.5)',
                 borderRadius: '4px',
-                color: 'var(--text-cream)'
+                color: '#93c5fd',
+                background: 'rgba(96, 165, 250, 0.1)',
+                margin: 0
               }}
+              title="Numéro du Joueur"
             />
-          </div>
-        )}
+          ) : isNarrator ? (
+            <div className="live-number-badge gold" style={{ width: '36px', height: '24px', fontSize: '0.75rem', borderRadius: '4px' }}>
+              0000
+            </div>
+          ) : (
+            <div className="live-number-badge muted" style={{ width: '32px', height: '24px', fontSize: '0.75rem', borderRadius: '4px' }}>
+              --
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => onRemove(p.id)}
+            className="live-delete-btn"
+            style={{ padding: '2px' }}
+            title="Retirer"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
       </div>
 
       {/* Bottom row: Quick Role Switcher */}
-      <div style={{ display: 'flex', gap: '0.35rem', paddingTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ display: 'flex', gap: '0.2rem', paddingTop: '0.2rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <button
           type="button"
           className={`live-role-btn ${isNarrator ? 'active narrator' : ''}`}

@@ -2081,8 +2081,8 @@ input:checked + .toggle-slider:before {
 
 .live-participants-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
 }
 
 .live-participant-card:hover {
@@ -2241,6 +2241,6 @@ input:checked + .toggle-slider:before {
     justify-content: center;
   }
   .live-participants-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
