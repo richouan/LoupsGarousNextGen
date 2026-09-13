@@ -6,13 +6,14 @@ import { SettingsTab } from './pages/SettingsTab';
 import { SecurityTab } from './pages/SecurityTab';
 import { BotSettingsTab } from './pages/BotSettingsTab';
 import { RestrictedServerView } from './components/RestrictedServerView';
-import { BookOpen, Sliders, ShieldCheck, Crown } from 'lucide-react';
+import { LivePartieTab } from './pages/LivePartieTab';
+import { BookOpen, Sliders, ShieldCheck, Crown, Radio } from 'lucide-react';
 
 export function App() {
   const [user, setUser] = useState<any | null>(null);
   const [guilds, setGuilds] = useState<any[]>([]);
   const [selectedGuild, setSelectedGuild] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<'cards' | 'settings' | 'security' | 'bot-settings'>('cards');
+  const [activeTab, setActiveTab] = useState<'cards' | 'live-partie' | 'settings' | 'security' | 'bot-settings'>('cards');
 
   const [cards, setCards] = useState<any[]>([]);
   const [settings, setSettings] = useState<any | null>(null);
@@ -272,6 +273,19 @@ export function App() {
             <BookOpen size={16} />
             <span>Roles</span>
           </button>
+          {selectedGuild.id !== 'global' && (
+            <button
+              className={`tab-btn ${activeTab === 'live-partie' ? 'active' : ''}`}
+              onClick={() => setActiveTab('live-partie')}
+              style={{
+                borderColor: activeTab === 'live-partie' ? 'var(--gold)' : undefined,
+                color: activeTab === 'live-partie' ? 'var(--gold)' : undefined
+              }}
+            >
+              <Radio size={16} />
+              <span>Live Partie</span>
+            </button>
+          )}
           <button
             className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => setActiveTab('settings')}
@@ -603,6 +617,12 @@ export function App() {
                 onDeleteCard={handleDeleteCard}
                 selectedGuildName={selectedGuild.name}
                 isSuperAdmin={user?.isSuperAdmin}
+              />
+            )}
+            {activeTab === 'live-partie' && (
+              <LivePartieTab
+                selectedGuild={selectedGuild}
+                channels={channels}
               />
             )}
             {activeTab === 'settings' && (

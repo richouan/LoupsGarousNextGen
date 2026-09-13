@@ -13,6 +13,7 @@ import guildsRoutes from './routes/guilds.routes';
 import cardsRoutes from './routes/cards.routes';
 import botRoutes from './routes/bot.routes';
 import uploadRoutes from './routes/upload.routes';
+import livePartieRoutes from './routes/livePartie.routes';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -75,6 +76,7 @@ app.use('/uploads', express.static(path.resolve(__dirname, '../../../../uploads'
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/guilds', guildsRoutes);
+app.use('/api/guilds', livePartieRoutes);
 app.use('/api/cards', cardsRoutes);
 app.use('/api/bot', botRoutes);
 app.use('/api/upload', uploadRoutes);

@@ -91,7 +91,9 @@ export function createBotClient() {
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
-      GatewayIntentBits.DirectMessages
+      GatewayIntentBits.DirectMessages,
+      GatewayIntentBits.GuildVoiceStates,
+      GatewayIntentBits.GuildMembers
     ],
     partials: [Partials.Channel, Partials.Message]
   });
@@ -128,6 +130,77 @@ export function createBotClient() {
       deployCommands(botToken, clientId, activeGuildIds)
         .catch((err) => console.warn('[Bot] Failed to deploy slash commands on startup:', err.message));
     }
+
+    // Initial sync of active voice states across joined guilds
+    const syncGuildVoiceChannels = async (guild: any) => {
+      try {
+        const voiceChannels = guild.channels.cache.filter((ch: any) => ch.isVoiceBased?.());
+        const voiceData: { channelId: string; members: any[] }[] = [];
+        for (const [channelId, channel] of voiceChannels) {
+          if ('members' in channel && channel.members.size > 0) {
+            voiceData.push({
+              channelId,
+              members: channel.members.map((m: any) => ({
+                id: m.id,
+                username: m.user.username,
+                displayName: m.displayName || m.user.username,
+                avatar: m.user.displayAvatarURL({ size: 128 }),
+                isMute: Boolean(m.voice.mute || m.voice.selfMute),
+                isDeaf: Boolean(m.voice.deaf || m.voice.selfDeaf),
+                joinedVoiceAt: m.voice.joinedAt?.toISOString() || null
+              }))
+            });
+          }
+        }
+        if (voiceData.length > 0) {
+          await botApi.post('/bot/voice-states-bulk', { guildId: guild.id, channels: voiceData }).catch(() => {});
+        }
+      } catch {}
+    };
+
+    c.guilds.cache.forEach((g) => syncGuildVoiceChannels(g));
+    setInterval(() => {
+      c.guilds.cache.forEach((g) => syncGuildVoiceChannels(g));
+    }, 12000);
+  });
+
+  // Live voice state changes (join, leave, switch, mute, deafen)
+  client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+    try {
+      const guild = newState.guild || oldState.guild;
+      if (!guild) return;
+
+      const affectedChannelIds = new Set<string>();
+      if (oldState.channelId) affectedChannelIds.add(oldState.channelId);
+      if (newState.channelId) affectedChannelIds.add(newState.channelId);
+
+      for (const channelId of affectedChannelIds) {
+        const channel = guild.channels.cache.get(channelId);
+        if (channel && channel.isVoiceBased()) {
+          const members = channel.members.map((m: any) => ({
+            id: m.id,
+            username: m.user.username,
+            displayName: m.displayName || m.user.username,
+            avatar: m.user.displayAvatarURL({ size: 128 }),
+            isMute: Boolean(m.voice.mute || m.voice.selfMute),
+            isDeaf: Boolean(m.voice.deaf || m.voice.selfDeaf),
+            joinedVoiceAt: m.voice.joinedAt?.toISOString() || null
+          }));
+          botApi.post('/bot/voice-state-update', {
+            guildId: guild.id,
+            channelId,
+            members
+          }).catch(() => {});
+        } else {
+          // Channel is empty now
+          botApi.post('/bot/voice-state-update', {
+            guildId: guild.id,
+            channelId,
+            members: []
+          }).catch(() => {});
+        }
+      }
+    } catch {}
   });
 
   // When bot joins a new server

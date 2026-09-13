@@ -2004,3 +2004,243 @@ input:checked + .toggle-slider:before {
   color: var(--wolf-red);
   transform: scale(1.15);
 }
+
+/* ============================================================= */
+/* 🎮 LIVE PARTIE & GAME ROOM STYLES                             */
+/* ============================================================= */
+
+.live-pulse-icon {
+  animation: livePulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes livePulseGlow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+    filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.4));
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.8));
+  }
+}
+
+.live-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-dark);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-cream);
+}
+
+.live-stat-pill.gold {
+  border-color: rgba(212, 175, 55, 0.35);
+  background: rgba(212, 175, 55, 0.08);
+  color: var(--gold);
+}
+
+.live-stat-pill.blue {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(96, 165, 250, 0.08);
+  color: #93c5fd;
+}
+
+.live-stat-pill.purple {
+  border-color: rgba(192, 132, 252, 0.35);
+  background: rgba(192, 132, 252, 0.08);
+  color: #c084fc;
+}
+
+.live-stat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.live-stat-dot.active {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.live-empty-state {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  border: 1px dashed var(--border-dark);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.live-participants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.live-participant-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 175, 55, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.live-number-badge {
+  font-family: var(--font-fantasy);
+  font-weight: 700;
+  font-size: 1.1rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.live-number-badge.gold {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(212, 175, 55, 0.1));
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.25);
+}
+
+.live-number-badge.blue {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.25), rgba(59, 130, 246, 0.08));
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  color: #93c5fd;
+}
+
+.live-number-badge.muted {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-dark);
+  color: var(--text-muted);
+}
+
+.live-voice-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #18181b;
+  border: 2px solid #18181b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.live-voice-dot.online {
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+.live-voice-dot.waiting {
+  box-shadow: 0 0 6px rgba(192, 132, 252, 0.4);
+}
+
+.live-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.live-delete-btn:hover {
+  color: var(--wolf-red);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.live-role-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-dark);
+  color: var(--text-light-muted);
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.live-role-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text-cream);
+}
+
+.live-role-btn.active.narrator {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.live-role-btn.active.player {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: #60a5fa;
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+.live-role-btn.active.spectator {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--text-muted);
+  color: var(--text-cream);
+  font-weight: 600;
+}
+
+/* Sticky Action Bar */
+.live-sticky-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(14, 14, 18, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border-gold-dim);
+  padding: 0.85rem 1.5rem;
+  z-index: 100;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.7);
+}
+
+.live-sticky-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.live-sticky-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 640px) {
+  .live-sticky-content {
+    justify-content: center;
+  }
+  .live-participants-grid {
+    grid-template-columns: 1fr;
+  }
+}

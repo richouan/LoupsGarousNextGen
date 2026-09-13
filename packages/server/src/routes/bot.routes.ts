@@ -13,6 +13,7 @@ import {
 } from '../utils/allowedGuilds';
 import { authenticate } from './guilds.routes';
 import { requireDev } from '../middleware/rbac';
+import { livePartieService } from '../services/LivePartieService';
 
 const router = Router();
 
@@ -480,6 +481,32 @@ router.post('/simulate-reply', async (req: Request, res: Response) => {
     autoDeleteSeconds: parsedSetting.autoDeleteSeconds,
     reason: `Bot successfully triggered card "${matchedCard.name}"!`
   });
+});
+
+/**
+ * Bot internal: Update voice channel members in live session
+ */
+router.post('/voice-state-update', requireBotAuth, (req: Request, res: Response) => {
+  const { guildId, channelId, members } = req.body;
+  if (!guildId || !channelId) {
+    return res.status(400).json({ error: 'guildId and channelId are required' });
+  }
+
+  livePartieService.updateVoiceChannelMembers(guildId, channelId, Array.isArray(members) ? members : []);
+  return res.json({ success: true });
+});
+
+/**
+ * Bot internal: Bulk sync of active voice states across channels
+ */
+router.post('/voice-states-bulk', requireBotAuth, (req: Request, res: Response) => {
+  const { guildId, channels } = req.body;
+  if (!guildId || !Array.isArray(channels)) {
+    return res.status(400).json({ error: 'guildId and channels array are required' });
+  }
+
+  livePartieService.updateBulkVoiceStates(guildId, channels);
+  return res.json({ success: true });
 });
 
 export default router;
