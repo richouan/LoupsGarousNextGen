@@ -1927,3 +1927,80 @@ input:checked + .toggle-slider:before {
   font-size: 0.8rem;
   color: var(--text-light-muted);
 }
+
+/* ====== NARRATOR ROLES & USERS CHIPS ====== */
+.narrator-chips-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 42px;
+  align-items: center;
+}
+
+.narrator-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.84rem;
+  color: var(--text-cream);
+  transition: all 0.2s ease;
+}
+
+.narrator-chip:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--gold);
+}
+
+.narrator-chip-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+.narrator-chip-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.narrator-chip-user {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.narrator-chip-user:hover {
+  border-color: #818cf8;
+}
+
+.narrator-chip-user-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.25);
+  color: #c7d2fe;
+}
+
+.narrator-chip-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, transform 0.15s ease;
+  margin-left: 0.15rem;
+}
+
+.narrator-chip-remove:hover {
+  color: var(--wolf-red);
+  transform: scale(1.15);
+}

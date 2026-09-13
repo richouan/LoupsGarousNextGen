@@ -25,6 +25,8 @@ export interface GuildSettingData {
   allowedChannelIds: string[];
   allowedCategoryIds: string[];
   ignoredChannelIds: string[];
+  narratorRoleIds?: string[];
+  narratorUserIds?: string[];
   userCooldownSeconds: number;
   channelCooldownSeconds: number;
   autoDeleteSeconds: number;

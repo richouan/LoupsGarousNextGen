@@ -28,6 +28,8 @@ model GuildSetting {
   allowedChannelIds      String   @default("[]") // JSON stringified array of channel IDs
   allowedCategoryIds     String   @default("[]") // JSON stringified array of category IDs
   ignoredChannelIds      String   @default("[]") // JSON stringified array of channel IDs
+  narratorRoleIds        String   @default("[]") // JSON stringified array of Discord role IDs
+  narratorUserIds        String   @default("[]") // JSON stringified array of Discord user IDs
   userCooldownSeconds    Int      @default(3) // Rate limit per user
   channelCooldownSeconds Int      @default(1)
   autoDeleteSeconds      Int      @default(0) // 0 = disabled, > 0 = delete bot reply after X seconds

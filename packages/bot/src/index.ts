@@ -169,8 +169,8 @@ export function createBotClient() {
 
   // Message listening for exact role names and admin channel lock/unlock (sed / 7el)
   client.on(Events.MessageCreate, async (message) => {
-    // 1. Check for 'sed' (close chat) and '7el' (open chat) from admins
-    const handled = await chatControlService.handleMessage(message);
+    // 1. Check for 'sed' (close chat) and '7el' (open chat) from admins or narrators
+    const handled = await chatControlService.handleMessage(message, fetchGuildConfig);
     if (handled) {
       return;
     }
@@ -187,7 +187,7 @@ export function createBotClient() {
 
   // Interaction handler for buttons and slash commands
   client.on(Events.InteractionCreate, async (interaction) => {
-    await handleInteraction(interaction, getCardById, getAllCardsForGuild);
+    await handleInteraction(interaction, getCardById, getAllCardsForGuild, fetchGuildConfig);
   });
 
   return client;

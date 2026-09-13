@@ -6,7 +6,8 @@ import { isGuildAllowed, getResolvedAllowedGuilds, getContactUser } from '../uti
 export async function handleInteraction(
   interaction: Interaction,
   getCardById: (cardId: string) => Promise<MatchableCard | null>,
-  getAllCardsForGuild: (guildId: string | null) => Promise<MatchableCard[]>
+  getAllCardsForGuild: (guildId: string | null) => Promise<MatchableCard[]>,
+  fetchGuildConfig?: (guildId: string | null) => Promise<any>
 ): Promise<void> {
   // Check if interaction is executed in an authorized server
   if (interaction.guildId && !(await isGuildAllowed(interaction.guildId))) {
@@ -112,7 +113,35 @@ export async function handleInteraction(
         interaction.memberPermissions?.has('Administrator') ||
         interaction.guild.ownerId === interaction.user.id;
 
-      if (!isAdmin) {
+      let isNarrator = false;
+      if (!isAdmin && fetchGuildConfig && interaction.guildId) {
+        try {
+          const config = await fetchGuildConfig(interaction.guildId);
+          if (config) {
+            const narratorRoleIds: string[] = Array.isArray(config.narratorRoleIds)
+              ? config.narratorRoleIds
+              : (typeof config.narratorRoleIds === 'string' ? JSON.parse(config.narratorRoleIds || '[]') : []);
+            const narratorUserIds: string[] = Array.isArray(config.narratorUserIds)
+              ? config.narratorUserIds
+              : (typeof config.narratorUserIds === 'string' ? JSON.parse(config.narratorUserIds || '[]') : []);
+
+            if (narratorUserIds.includes(interaction.user.id)) {
+              isNarrator = true;
+            } else if (interaction.member && 'roles' in interaction.member) {
+              const memberRoles = (interaction.member as any).roles;
+              if (memberRoles?.cache) {
+                isNarrator = memberRoles.cache.some((r: any) => narratorRoleIds.includes(r.id));
+              } else if (Array.isArray(memberRoles)) {
+                isNarrator = memberRoles.some((rId: string) => narratorRoleIds.includes(rId));
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[Slash sed/hel] Error checking narrator roles:', err);
+        }
+      }
+
+      if (!isAdmin && !isNarrator) {
         await interaction.reply({ content: '❌ Seuls les administrateurs ou narrateurs peuvent gérer ce salon.', ephemeral: true });
         return;
       }

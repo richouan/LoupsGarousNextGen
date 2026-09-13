@@ -119,6 +119,61 @@ router.get('/:guildId/channels', authenticate, requireGuildAdmin, async (req: Re
   }
 });
 
+// 60-second in-memory cache for Discord roles to avoid hitting Discord API rate limits
+const rolesCache = new Map<string, { data: any[]; timestamp: number }>();
+const ROLES_CACHE_TTL = 60 * 1000;
+
+/**
+ * Get roles for a guild directly from Discord API
+ */
+router.get('/:guildId/roles', authenticate, requireGuildAdmin, async (req: Request, res: Response) => {
+  const { guildId } = req.params;
+  const botToken = getBotToken();
+
+  if (guildId === 'global') {
+    return res.json([]);
+  }
+
+  // Return cached roles if still fresh
+  const cached = rolesCache.get(guildId);
+  if (cached && Date.now() - cached.timestamp < ROLES_CACHE_TTL) {
+    return res.json(cached.data);
+  }
+
+  if (!botToken) {
+    console.warn('[Guilds] No DISCORD_BOT_TOKEN provided, returning empty roles list');
+    return res.json([]);
+  }
+
+  try {
+    const discordRes = await axios.get(`https://discord.com/api/guilds/${guildId}/roles`, {
+      headers: { Authorization: `Bot ${botToken}` }
+    });
+
+    const rawRoles: any[] = discordRes.data;
+    console.log(`[Guilds] Fetched ${rawRoles.length} roles for guild ${guildId}`);
+
+    // Filter out @everyone role (id matches guildId) and format cleanly
+    const formattedRoles = rawRoles
+      .filter((r: any) => r.id !== guildId)
+      .map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        color: r.color ? `#${r.color.toString(16).padStart(6, '0')}` : null,
+        position: r.position,
+        permissions: r.permissions
+      }))
+      .sort((a, b) => (b.position || 0) - (a.position || 0));
+
+    // Store in cache
+    rolesCache.set(guildId, { data: formattedRoles, timestamp: Date.now() });
+    return res.json(formattedRoles);
+  } catch (err: any) {
+    console.error(`[Guilds] Error fetching live roles for guild ${guildId}:`, err.response?.status, err.response?.data || err.message);
+    return res.json([]);
+  }
+});
+
 /**
  * Get guild settings
  */
@@ -150,6 +205,8 @@ router.get('/:guildId/settings', authenticate, requireGuildAdmin, async (req: Re
         allowedChannelIds: JSON.stringify(['chan-101', 'chan-202']),
         allowedCategoryIds: JSON.stringify(['cat-1']),
         ignoredChannelIds: JSON.stringify(['chan-203']),
+        narratorRoleIds: JSON.stringify([]),
+        narratorUserIds: JSON.stringify([]),
         userCooldownSeconds: 3,
         channelCooldownSeconds: 1,
         autoDeleteSeconds: 0,
@@ -162,7 +219,9 @@ router.get('/:guildId/settings', authenticate, requireGuildAdmin, async (req: Re
     ...setting,
     allowedChannelIds: JSON.parse(setting.allowedChannelIds || '[]'),
     allowedCategoryIds: JSON.parse(setting.allowedCategoryIds || '[]'),
-    ignoredChannelIds: JSON.parse(setting.ignoredChannelIds || '[]')
+    ignoredChannelIds: JSON.parse(setting.ignoredChannelIds || '[]'),
+    narratorRoleIds: JSON.parse(setting.narratorRoleIds || '[]'),
+    narratorUserIds: JSON.parse(setting.narratorUserIds || '[]')
   });
 });
 
@@ -188,6 +247,8 @@ router.put('/:guildId/settings', authenticate, requireGuildAdmin, async (req: Re
     allowedChannelIds,
     allowedCategoryIds,
     ignoredChannelIds,
+    narratorRoleIds,
+    narratorUserIds,
     userCooldownSeconds,
     channelCooldownSeconds,
     autoDeleteSeconds,
@@ -214,6 +275,8 @@ router.put('/:guildId/settings', authenticate, requireGuildAdmin, async (req: Re
       allowedChannelIds: JSON.stringify(allowedChannelIds ?? []),
       allowedCategoryIds: JSON.stringify(allowedCategoryIds ?? []),
       ignoredChannelIds: JSON.stringify(ignoredChannelIds ?? []),
+      narratorRoleIds: JSON.stringify(narratorRoleIds ?? []),
+      narratorUserIds: JSON.stringify(narratorUserIds ?? []),
       userCooldownSeconds: Number(userCooldownSeconds) || 3,
       channelCooldownSeconds: Number(channelCooldownSeconds) || 1,
       autoDeleteSeconds: Number(autoDeleteSeconds) || 0,
@@ -228,6 +291,8 @@ router.put('/:guildId/settings', authenticate, requireGuildAdmin, async (req: Re
       allowedChannelIds: JSON.stringify(allowedChannelIds ?? []),
       allowedCategoryIds: JSON.stringify(allowedCategoryIds ?? []),
       ignoredChannelIds: JSON.stringify(ignoredChannelIds ?? []),
+      narratorRoleIds: JSON.stringify(narratorRoleIds ?? []),
+      narratorUserIds: JSON.stringify(narratorUserIds ?? []),
       userCooldownSeconds: Number(userCooldownSeconds) || 3,
       channelCooldownSeconds: Number(channelCooldownSeconds) || 1,
       autoDeleteSeconds: Number(autoDeleteSeconds) || 0,
@@ -239,7 +304,9 @@ router.put('/:guildId/settings', authenticate, requireGuildAdmin, async (req: Re
     ...updated,
     allowedChannelIds: JSON.parse(updated.allowedChannelIds || '[]'),
     allowedCategoryIds: JSON.parse(updated.allowedCategoryIds || '[]'),
-    ignoredChannelIds: JSON.parse(updated.ignoredChannelIds || '[]')
+    ignoredChannelIds: JSON.parse(updated.ignoredChannelIds || '[]'),
+    narratorRoleIds: JSON.parse(updated.narratorRoleIds || '[]'),
+    narratorUserIds: JSON.parse(updated.narratorUserIds || '[]')
   });
 });
 

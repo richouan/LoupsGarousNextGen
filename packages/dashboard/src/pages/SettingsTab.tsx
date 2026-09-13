@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Hash, Folder, ShieldCheck, MessageSquare, Server, PlusCircle } from 'lucide-react';
+import { Hash, Folder, ShieldCheck, MessageSquare, Server, PlusCircle, Crown, Users, Plus, X } from 'lucide-react';
+import { api } from '../api';
 
 interface SettingsTabProps {
   settings: any;
@@ -8,6 +9,13 @@ interface SettingsTabProps {
   selectedGuildName: string;
   selectedGuildId?: string;
   onGoHome?: () => void;
+}
+
+interface DiscordRole {
+  id: string;
+  name: string;
+  color: string | null;
+  position: number;
 }
 
 const ToggleSetting = ({ icon: Icon, title, description, checked, onChange, danger = false }: any) => (
@@ -36,12 +44,46 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   selectedGuildId,
   onGoHome
 }) => {
-  const [form, setForm] = useState<any>({ ...settings });
+  const [form, setForm] = useState<any>({
+    ...settings,
+    narratorRoleIds: settings?.narratorRoleIds || [],
+    narratorUserIds: settings?.narratorUserIds || []
+  });
   const [saving, setSaving] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState<DiscordRole[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [selectedRoleToAdd, setSelectedRoleToAdd] = useState('');
+  const [newUserId, setNewUserId] = useState('');
 
   useEffect(() => {
-    setForm({ ...settings });
+    setForm({
+      ...settings,
+      narratorRoleIds: settings?.narratorRoleIds || [],
+      narratorUserIds: settings?.narratorUserIds || []
+    });
   }, [settings]);
+
+  useEffect(() => {
+    if (!selectedGuildId || selectedGuildId === 'global') return;
+    let isMounted = true;
+    const fetchRoles = async () => {
+      try {
+        setLoadingRoles(true);
+        const res = await api.get(`/guilds/${selectedGuildId}/roles`);
+        if (isMounted) {
+          setAvailableRoles(res.data || []);
+        }
+      } catch (err) {
+        console.warn('Could not load server roles:', err);
+      } finally {
+        if (isMounted) setLoadingRoles(false);
+      }
+    };
+    fetchRoles();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedGuildId]);
 
   const isGlobalMode = selectedGuildId === 'global' || selectedGuildName === 'Global Role Management';
 
@@ -125,6 +167,36 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   const hasChanges = JSON.stringify(form) !== JSON.stringify(settings);
 
+  const narratorRoleIds: string[] = Array.isArray(form.narratorRoleIds) ? form.narratorRoleIds : [];
+  const narratorUserIds: string[] = Array.isArray(form.narratorUserIds) ? form.narratorUserIds : [];
+
+  const addNarratorRole = (roleId: string) => {
+    if (!roleId || narratorRoleIds.includes(roleId)) return;
+    setForm({ ...form, narratorRoleIds: [...narratorRoleIds, roleId] });
+    setSelectedRoleToAdd('');
+  };
+
+  const removeNarratorRole = (roleId: string) => {
+    setForm({ ...form, narratorRoleIds: narratorRoleIds.filter((id) => id !== roleId) });
+  };
+
+  const addNarratorUser = () => {
+    const trimmed = newUserId.trim();
+    if (!trimmed || narratorUserIds.includes(trimmed)) return;
+    if (!/^\d{17,20}$/.test(trimmed)) {
+      alert("L'identifiant Discord doit être un identifiant valide (17 à 20 chiffres).");
+      return;
+    }
+    setForm({ ...form, narratorUserIds: [...narratorUserIds, trimmed] });
+    setNewUserId('');
+  };
+
+  const removeNarratorUser = (userId: string) => {
+    setForm({ ...form, narratorUserIds: narratorUserIds.filter((id) => id !== userId) });
+  };
+
+  const unassignedRoles = availableRoles.filter((r) => !narratorRoleIds.includes(r.id));
+
   const toggleChannel = (channelId: string) => {
     const list = form.allowedChannelIds || [];
     const exists = list.includes(channelId);
@@ -164,6 +236,191 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         <p style={{ color: 'var(--text-dark-secondary)', fontSize: '0.95rem' }}>
           Configure where and how the bot listens on <strong>{selectedGuildName}</strong>.
         </p>
+      </div>
+
+      {/* 🎭 NARRATORS & GAME MASTERS SECTION */}
+      <div
+        className="glass-panel"
+        style={{
+          marginBottom: '1.5rem',
+          border: '1px solid rgba(212, 175, 55, 0.35)',
+          background: 'radial-gradient(ellipse at top left, rgba(212, 175, 55, 0.08) 0%, rgba(20, 15, 12, 0.75) 65%)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div
+              style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '50%',
+                background: 'rgba(212, 175, 55, 0.15)',
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 15px rgba(212, 175, 55, 0.2)'
+              }}
+            >
+              <Crown size={22} color="var(--gold)" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-cream)' }}>
+                🎭 Narrateurs du Serveur (Game Masters)
+              </h3>
+              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-light-muted)' }}>
+                Désignez les rôles Discord ou membres autorisés à arbitrer la partie et exécuter les commandes d'administration comme <code>sed</code> (verrouiller la nuit) et <code>7el</code> / <code>hel</code> (déverrouiller le jour).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Roles & Users sub-grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+          
+          {/* Sub-block 1: Discord Roles */}
+          <div style={{ background: 'rgba(0, 0, 0, 0.25)', border: '1px solid var(--border-dark)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-cream)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <ShieldCheck size={16} color="var(--gold)" />
+                Rôles Narrateurs
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {narratorRoleIds.length} assigné{narratorRoleIds.length > 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Dropdown to add role */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              <select
+                className="form-control"
+                style={{ flex: 1, fontSize: '0.85rem', background: 'var(--bg-dark-surface)' }}
+                value={selectedRoleToAdd}
+                onChange={(e) => setSelectedRoleToAdd(e.target.value)}
+                disabled={loadingRoles || unassignedRoles.length === 0}
+              >
+                <option value="">
+                  {loadingRoles
+                    ? 'Chargement des rôles Discord...'
+                    : unassignedRoles.length === 0
+                    ? 'Aucun autre rôle disponible'
+                    : 'Sélectionner un rôle Discord à ajouter...'}
+                </option>
+                {unassignedRoles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    @{role.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn-gold"
+                style={{ padding: '0 0.9rem', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}
+                onClick={() => addNarratorRole(selectedRoleToAdd)}
+                disabled={!selectedRoleToAdd}
+              >
+                <Plus size={16} />
+                <span>Ajouter</span>
+              </button>
+            </div>
+
+            {/* Badges / Chips list */}
+            <div className="narrator-chips-list">
+              {narratorRoleIds.length === 0 ? (
+                <div style={{ width: '100%', padding: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', border: '1px dashed var(--border-dark)', borderRadius: 'var(--radius-sm)' }}>
+                  Aucun rôle de narrateur configuré. Seuls les administrateurs du serveur peuvent utiliser <code>sed</code> / <code>7el</code>.
+                </div>
+              ) : (
+                narratorRoleIds.map((roleId) => {
+                  const role = availableRoles.find((r) => r.id === roleId);
+                  const roleName = role ? role.name : `Rôle (${roleId})`;
+                  const roleColor = role?.color || 'var(--gold)';
+                  return (
+                    <div key={roleId} className="narrator-chip">
+                      <span className="narrator-chip-color" style={{ background: roleColor }} />
+                      <span className="narrator-chip-name">@{roleName}</span>
+                      <button
+                        type="button"
+                        className="narrator-chip-remove"
+                        onClick={() => removeNarratorRole(roleId)}
+                        title="Retirer ce rôle narrateur"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Sub-block 2: Specific User IDs */}
+          <div style={{ background: 'rgba(0, 0, 0, 0.25)', border: '1px solid var(--border-dark)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-cream)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Users size={16} color="var(--gold)" />
+                Membres Narrateurs Spécifiques
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {narratorUserIds.length} assigné{narratorUserIds.length > 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Input to add user ID */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Ex: 289123456789012345 (User ID)"
+                value={newUserId}
+                onChange={(e) => setNewUserId(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addNarratorUser();
+                  }
+                }}
+                style={{ flex: 1, fontSize: '0.85rem' }}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '0 0.9rem', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}
+                onClick={addNarratorUser}
+                disabled={!newUserId.trim()}
+              >
+                <Plus size={16} />
+                <span>Ajouter</span>
+              </button>
+            </div>
+
+            {/* User IDs Chip list */}
+            <div className="narrator-chips-list">
+              {narratorUserIds.length === 0 ? (
+                <div style={{ width: '100%', padding: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem', border: '1px dashed var(--border-dark)', borderRadius: 'var(--radius-sm)' }}>
+                  Aucun membre spécifique configuré (optionnel).
+                </div>
+              ) : (
+                narratorUserIds.map((uId) => (
+                  <div key={uId} className="narrator-chip narrator-chip-user">
+                    <span className="narrator-chip-user-badge">ID</span>
+                    <span className="narrator-chip-name">{uId}</span>
+                    <button
+                      type="button"
+                      className="narrator-chip-remove"
+                      onClick={() => removeNarratorUser(uId)}
+                      title="Retirer cet identifiant"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>

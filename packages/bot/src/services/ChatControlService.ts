@@ -6,10 +6,13 @@ const OPEN_TRIGGERS = new Set(['7el', '!7el', '/7el', 'hel', '!hel', '7al', '!7a
 
 export class ChatControlService {
   /**
-   * Listens for admin triggers 'sed' (close chat) and '7el' (open chat)
+   * Listens for admin and narrator triggers 'sed' (close chat) and '7el' / 'hel' (open chat)
    * Returns true if a command was executed
    */
-  public async handleMessage(message: Message): Promise<boolean> {
+  public async handleMessage(
+    message: Message,
+    fetchGuildConfig?: (guildId: string | null) => Promise<any>
+  ): Promise<boolean> {
     if (!message.guild || message.author.bot) {
       return false;
     }
@@ -22,7 +25,7 @@ export class ChatControlService {
       return false;
     }
 
-    // Permission check: only admins or channel managers can close/open chat
+    // Permission check: admins, channel managers, or server narrators can close/open chat
     const member = message.member;
     if (!member) {
       return false;
@@ -34,8 +37,23 @@ export class ChatControlService {
       member.permissions.has(PermissionsBitField.Flags.ManageGuild) ||
       message.guild.ownerId === message.author.id;
 
-    if (!isAdmin) {
-      return false; // Silently ignore non-admins so regular chat isn't disrupted
+    let isNarrator = false;
+    if (fetchGuildConfig && message.guild) {
+      try {
+        const config = await fetchGuildConfig(message.guild.id);
+        const narratorRoleIds: string[] = config.settings?.narratorRoleIds || [];
+        const narratorUserIds: string[] = config.settings?.narratorUserIds || [];
+
+        const hasNarratorRole = member.roles.cache.some((r) => narratorRoleIds.includes(r.id));
+        const hasNarratorUser = narratorUserIds.includes(message.author.id);
+        isNarrator = hasNarratorRole || hasNarratorUser;
+      } catch (err) {
+        console.error('[ChatControlService] Error checking narrator config:', err);
+      }
+    }
+
+    if (!isAdmin && !isNarrator) {
+      return false; // Silently ignore non-authorized users so regular chat isn't disrupted
     }
 
     // Whitelist check: If the server is not authorized, notify the admin

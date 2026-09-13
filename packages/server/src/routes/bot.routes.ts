@@ -254,7 +254,9 @@ router.get('/guild-config/:guildId', requireBotAuth, async (req: Request, res: R
         ...setting,
         allowedChannelIds: JSON.parse(setting.allowedChannelIds || '[]'),
         allowedCategoryIds: JSON.parse(setting.allowedCategoryIds || '[]'),
-        ignoredChannelIds: JSON.parse(setting.ignoredChannelIds || '[]')
+        ignoredChannelIds: JSON.parse(setting.ignoredChannelIds || '[]'),
+        narratorRoleIds: JSON.parse(setting.narratorRoleIds || '[]'),
+        narratorUserIds: JSON.parse(setting.narratorUserIds || '[]')
       }
       : {
         guildId,
@@ -265,6 +267,8 @@ router.get('/guild-config/:guildId', requireBotAuth, async (req: Request, res: R
         allowedChannelIds: [],
         allowedCategoryIds: [],
         ignoredChannelIds: [],
+        narratorRoleIds: [],
+        narratorUserIds: [],
         userCooldownSeconds: 3,
         channelCooldownSeconds: 1,
         autoDeleteSeconds: 0,
