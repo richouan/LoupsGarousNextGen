@@ -263,15 +263,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 boxShadow: '0 0 15px rgba(212, 175, 55, 0.2)'
               }}
             >
-              <Crown size={22} color="var(--gold)" />
+              {/* <Crown size={22} color="var(--gold)" /> */}
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-cream)' }}>
-                🎭 Narrateurs du Serveur (Game Masters)
+                🎭 Narrateurs du Serveur
               </h3>
-              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-light-muted)' }}>
-                Désignez les rôles Discord ou membres autorisés à arbitrer la partie et exécuter les commandes d'administration comme <code>sed</code> (verrouiller la nuit) et <code>7el</code> / <code>hel</code> (déverrouiller le jour).
-              </p>
             </div>
           </div>
         </div>
