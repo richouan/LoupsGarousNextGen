@@ -250,21 +250,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '50%',
-                background: 'rgba(212, 175, 55, 0.15)',
-                border: '1px solid rgba(212, 175, 55, 0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 0 15px rgba(212, 175, 55, 0.2)'
-              }}
-            >
-              {/* <Crown size={22} color="var(--gold)" /> */}
-            </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-cream)' }}>
                 🎭 Narrateurs du Serveur
