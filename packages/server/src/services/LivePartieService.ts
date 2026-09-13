@@ -258,10 +258,39 @@ class LivePartieManager {
 
   /**
    * Remove a participant from the live session
+   * Connected players cannot be removed manually while in voice channel
    */
   public removeParticipant(guildId: string, userId: string): LivePartieSession {
     const session = this.getSession(guildId);
-    session.participants = session.participants.filter((p) => p.id !== userId);
+    const p = session.participants.find((item) => item.id === userId);
+    if (p && p.isInVoice) {
+      throw new Error("Impossible de retirer un joueur actuellement connecté dans le salon vocal. Il doit quitter le salon lui-même.");
+    }
+    session.participants = session.participants.filter((item) => item.id !== userId);
+    session.lastUpdated = Date.now();
+    return session;
+  }
+
+  /**
+   * Save participant roles and numbers in bulk
+   */
+  public saveParticipants(
+    guildId: string,
+    updates: { id: string; role: ParticipantRole; number: number | null }[]
+  ): LivePartieSession {
+    const session = this.getSession(guildId);
+    const updateMap = new Map(updates.map((u) => [u.id, u]));
+
+    for (const p of session.participants) {
+      const u = updateMap.get(p.id);
+      if (u) {
+        p.role = u.role;
+        p.number = u.role === 'NARRATOR' ? 0 : u.role === 'SPECTATOR' ? null : u.number;
+        const cleanName = cleanOldName(p.originalNick || p.displayName);
+        p.targetNick = computeTargetNickname(cleanName, p.role, p.number);
+      }
+    }
+
     session.lastUpdated = Date.now();
     return session;
   }
@@ -348,7 +377,7 @@ class LivePartieManager {
   }
 
   /**
-   * Batch rename participants on Discord
+   * Batch rename participants on Discord with strict rate-limit protection and 429 backoff
    */
   public async applyRenames(guildId: string): Promise<{ success: boolean; session: LivePartieSession }> {
     const session = this.getSession(guildId);
@@ -367,6 +396,14 @@ class LivePartieManager {
 
     for (let i = 0; i < participantsToRename.length; i++) {
       const p = participantsToRename[i];
+
+      // Skip API call if nickname is already the target nickname
+      if (p.displayName === p.targetNick) {
+        p.renameStatus = 'SUCCESS';
+        session.renameProgress.current = i + 1;
+        continue;
+      }
+
       p.renameStatus = 'PENDING';
       p.renameError = undefined;
 
@@ -382,6 +419,16 @@ class LivePartieManager {
         const status = err.response?.status;
         const discordCode = err.response?.data?.code;
 
+        // Discord Rate Limit (HTTP 429) Handling
+        if (status === 429) {
+          const retryAfterSec = err.response?.data?.retry_after || 1.5;
+          const waitMs = Math.ceil(retryAfterSec * 1000) + 250;
+          console.warn(`[LivePartie] Discord 429 Rate Limit. Pausing for ${waitMs}ms before retrying player ${p.displayName}...`);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+          i--; // Retry this participant
+          continue;
+        }
+
         if (status === 403 || discordCode === 50013) {
           p.renameStatus = 'SKIPPED_HIERARCHY';
           p.renameError = 'Rôle supérieur au bot ou Propriétaire du serveur';
@@ -392,8 +439,8 @@ class LivePartieManager {
       }
 
       session.renameProgress.current = i + 1;
-      // Stagger by 160ms to prevent Discord rate limits (max ~10-15 req/sec)
-      await new Promise((resolve) => setTimeout(resolve, 160));
+      // Stagger by 350ms to strictly respect Discord rate limits (max 10 req/10 sec burst)
+      await new Promise((resolve) => setTimeout(resolve, 350));
     }
 
     session.isRenamingInProgress = false;
@@ -402,7 +449,7 @@ class LivePartieManager {
   }
 
   /**
-   * Reset/restore original nicknames on Discord
+   * Reset/restore original nicknames on Discord with rate-limit protection
    */
   public async resetRenames(guildId: string): Promise<{ success: boolean; session: LivePartieSession }> {
     const session = this.getSession(guildId);
@@ -420,6 +467,13 @@ class LivePartieManager {
       const p = participantsToReset[i];
       const cleanName = cleanOldName(p.originalNick || p.displayName);
 
+      // Skip API call if nickname is already the clean original name
+      if (p.displayName === cleanName) {
+        p.renameStatus = 'SUCCESS';
+        session.renameProgress.current = i + 1;
+        continue;
+      }
+
       try {
         await axios.patch(
           `https://discord.com/api/guilds/${guildId}/members/${p.id}`,
@@ -432,6 +486,16 @@ class LivePartieManager {
       } catch (err: any) {
         const status = err.response?.status;
         const discordCode = err.response?.data?.code;
+
+        if (status === 429) {
+          const retryAfterSec = err.response?.data?.retry_after || 1.5;
+          const waitMs = Math.ceil(retryAfterSec * 1000) + 250;
+          console.warn(`[LivePartie] Discord 429 Rate Limit on reset. Pausing for ${waitMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+          i--;
+          continue;
+        }
+
         if (status === 403 || discordCode === 50013) {
           p.renameStatus = 'SKIPPED_HIERARCHY';
         } else {
@@ -440,7 +504,7 @@ class LivePartieManager {
       }
 
       session.renameProgress.current = i + 1;
-      await new Promise((resolve) => setTimeout(resolve, 160));
+      await new Promise((resolve) => setTimeout(resolve, 350));
     }
 
     session.isRenamingInProgress = false;

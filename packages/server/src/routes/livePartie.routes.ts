@@ -73,6 +73,21 @@ router.post('/:guildId/live-partie/update-participant', authenticate, requireGui
 });
 
 /**
+  * Save participant updates in bulk (roles, numbers)
+  */
+router.post('/:guildId/live-partie/save-participants', authenticate, requireGuildAdmin, (req: Request, res: Response) => {
+  const { guildId } = req.params;
+  const { participants } = req.body;
+
+  if (!Array.isArray(participants)) {
+    return res.status(400).json({ error: 'participants array is required' });
+  }
+
+  const session = livePartieService.saveParticipants(guildId, participants);
+  return res.json(session);
+});
+
+/**
  * Automatically assign numbers (01, 02...) and 0000 to narrator(s)
  */
 router.post('/:guildId/live-partie/auto-number', authenticate, requireGuildAdmin, (req: Request, res: Response) => {

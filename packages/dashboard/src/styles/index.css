@@ -2323,6 +2323,24 @@ input:checked + .toggle-slider:before {
   font-weight: 600;
 }
 
+.live-participant-card.offline {
+  opacity: 0.7;
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.12);
+  filter: grayscale(0.25);
+}
+
+.live-participant-card.offline:hover {
+  opacity: 0.95;
+  filter: grayscale(0);
+}
+
+.live-voice-dot.offline {
+  background: #27272a;
+  border-color: #27272a;
+  box-shadow: none;
+}
+
 .live-empty-state-card {
   display: flex;
   flex-direction: column;
@@ -2335,6 +2353,63 @@ input:checked + .toggle-slider:before {
   text-align: center;
   color: var(--text-muted);
   gap: 0.75rem;
+}
+
+/* Floating Save Pop-Up Bar */
+.live-unsaved-bar {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 16, 26, 0.96);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  border-radius: 9999px;
+  padding: 0.6rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(212, 175, 55, 0.25);
+  z-index: 1000;
+  animation: slideUpFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 25px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.live-unsaved-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-cream);
+  white-space: nowrap;
+}
+
+.live-unsaved-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 10px var(--gold);
+  animation: pulseLive 1.4s infinite;
+}
+
+.live-unsaved-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 768px) {

@@ -54,8 +54,43 @@ interface LivePartieTabProps {
   channels: any[];
 }
 
+function cleanOldName(name: string): string {
+  if (!name) return '';
+  let cleaned = name.trim();
+  cleaned = cleaned.replace(/^(\d{1,4}|\(\d{1,4}\))\s*[\(-]?\s*/, '');
+  cleaned = cleaned.replace(/\s*\)$/, '');
+  cleaned = cleaned.replace(/^\[(Spec|MJ|Narrateur|Joueur)\]\s*/i, '');
+  return cleaned.trim() || name.trim();
+}
+
+function computeTargetNickname(cleanName: string, role: 'PLAYER' | 'NARRATOR' | 'SPECTATOR', num: number | null): string {
+  if (role === 'NARRATOR') {
+    const prefix = '0000 (';
+    const suffix = ')';
+    const maxNameLen = 32 - (prefix.length + suffix.length);
+    const safeName = cleanName.length > maxNameLen ? cleanName.slice(0, maxNameLen) : cleanName;
+    return `${prefix}${safeName}${suffix}`;
+  }
+
+  if (role === 'PLAYER' && num !== null && num > 0) {
+    const padded = String(num).padStart(2, '0');
+    const prefix = `${padded} (`;
+    const suffix = ')';
+    const maxNameLen = 32 - (prefix.length + suffix.length);
+    const safeName = cleanName.length > maxNameLen ? cleanName.slice(0, maxNameLen) : cleanName;
+    return `${prefix}${safeName}${suffix}`;
+  }
+
+  return cleanName.slice(0, 32);
+}
+
 export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, channels }) => {
   const [session, setSession] = useState<LiveSession | null>(null);
+  const [localParticipants, setLocalParticipants] = useState<LiveParticipant[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const hasUnsavedChangesRef = useRef(false);
+  hasUnsavedChangesRef.current = hasUnsavedChanges;
+
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [afterJoinerId, setAfterJoinerId] = useState('');
@@ -74,7 +109,39 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
     try {
       if (showLoading) setLoading(true);
       const res = await api.get(`/guilds/${selectedGuild.id}/live-partie/session`);
-      setSession(res.data);
+      const newSession: LiveSession = res.data;
+      setSession(newSession);
+
+      if (!hasUnsavedChangesRef.current) {
+        setLocalParticipants(newSession.participants || []);
+      } else {
+        // Merge real-time voice attributes into local working participants without overwriting unsaved role/number edits
+        setLocalParticipants((prev) => {
+          const remoteMap = new Map((newSession.participants || []).map((p) => [p.id, p]));
+          const updated = prev.map((local) => {
+            const remote = remoteMap.get(local.id);
+            if (remote) {
+              remoteMap.delete(local.id);
+              return {
+                ...local,
+                isInVoice: remote.isInVoice,
+                isMute: remote.isMute,
+                isDeaf: remote.isDeaf,
+                avatar: remote.avatar || local.avatar,
+                displayName: remote.displayName || local.displayName,
+                originalNick: remote.originalNick || local.originalNick,
+                renameStatus: remote.renameStatus
+              };
+            }
+            return local;
+          });
+          // Append new participants who joined voice
+          for (const newP of remoteMap.values()) {
+            updated.push(newP);
+          }
+          return updated;
+        });
+      }
     } catch (err: any) {
       console.warn('[LivePartie] Failed to fetch session:', err.message);
     } finally {
@@ -86,7 +153,7 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
     isPollingRef.current = true;
     fetchSession(true);
 
-    // Poll live session every 3 seconds for seamless real-time voice sync
+    // Poll live session every 3 seconds for voice synchronization
     const interval = setInterval(() => {
       if (isPollingRef.current) {
         fetchSession(false);
@@ -108,6 +175,8 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
         channelName: selectedChan ? selectedChan.name : null
       });
       setSession(res.data);
+      setLocalParticipants(res.data.participants || []);
+      setHasUnsavedChanges(false);
       setBannerMessage({
         type: 'info',
         text: selectedChan
@@ -136,7 +205,9 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
         role: afterJoinerRole
       });
       setSession(res.data);
+      setLocalParticipants(res.data.participants || []);
       setAfterJoinerId('');
+      setShowAddJoiner(false);
       setBannerMessage({
         type: 'success',
         text: `Joueur pré-inscrit (After-Joiner) ! Une place lui est réservée dès sa connexion vocale.`
@@ -148,63 +219,140 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
     }
   };
 
-  const handleUpdateParticipantRole = async (userId: string, newRole: 'PLAYER' | 'NARRATOR' | 'SPECTATOR') => {
-    try {
-      const res = await api.post(`/guilds/${selectedGuild.id}/live-partie/update-participant`, {
-        userId,
-        role: newRole
-      });
-      setSession(res.data);
-    } catch (err: any) {
-      setBannerMessage({ type: 'error', text: err.response?.data?.error || err.message });
-    }
+  const handleUpdateParticipantRole = (userId: string, newRole: 'PLAYER' | 'NARRATOR' | 'SPECTATOR') => {
+    setLocalParticipants((prev) =>
+      prev.map((p) => {
+        if (p.id !== userId) return p;
+        const newNum = newRole === 'NARRATOR' ? 0 : newRole === 'SPECTATOR' ? null : p.number;
+        const clean = cleanOldName(p.originalNick || p.displayName);
+        return {
+          ...p,
+          role: newRole,
+          number: newNum,
+          targetNick: computeTargetNickname(clean, newRole, newNum)
+        };
+      })
+    );
+    setHasUnsavedChanges(true);
   };
 
-  const handleUpdateParticipantNumber = async (userId: string, newNumber: number | null) => {
-    try {
-      const res = await api.post(`/guilds/${selectedGuild.id}/live-partie/update-participant`, {
-        userId,
-        number: newNumber
-      });
-      setSession(res.data);
-    } catch (err: any) {
-      setBannerMessage({ type: 'error', text: err.response?.data?.error || err.message });
-    }
+  const handleUpdateParticipantNumber = (userId: string, newNumber: number | null) => {
+    setLocalParticipants((prev) =>
+      prev.map((p) => {
+        if (p.id !== userId) return p;
+        const clean = cleanOldName(p.originalNick || p.displayName);
+        return {
+          ...p,
+          number: newNumber,
+          targetNick: computeTargetNickname(clean, p.role, newNumber)
+        };
+      })
+    );
+    setHasUnsavedChanges(true);
   };
 
   const handleRemoveParticipant = async (userId: string) => {
+    const target = localParticipants.find((p) => p.id === userId);
+    if (target?.isInVoice) {
+      setBannerMessage({
+        type: 'error',
+        text: 'Impossible de retirer un joueur connecté en vocal. Il doit quitter le salon vocal lui-même.'
+      });
+      return;
+    }
+
     try {
       const res = await api.post(`/guilds/${selectedGuild.id}/live-partie/remove-participant`, {
         userId
       });
       setSession(res.data);
+      setLocalParticipants(res.data.participants || []);
+      setBannerMessage({ type: 'info', text: 'Participant retiré de la liste.' });
     } catch (err: any) {
       setBannerMessage({ type: 'error', text: err.response?.data?.error || err.message });
     }
   };
 
-  const handleAutoNumber = async () => {
-    setActionLoading(true);
-    try {
-      const res = await api.post(`/guilds/${selectedGuild.id}/live-partie/auto-number`);
-      setSession(res.data);
-      setBannerMessage({
-        type: 'success',
-        text: 'Numéros attribués automatiquement : 0000 (MJ) et 01, 02... pour les joueurs !'
+  const handleAutoNumber = () => {
+    let counter = 1;
+    setLocalParticipants((prev) =>
+      prev.map((p) => {
+        const clean = cleanOldName(p.originalNick || p.displayName);
+        if (p.role === 'NARRATOR') {
+          return {
+            ...p,
+            number: 0,
+            targetNick: computeTargetNickname(clean, 'NARRATOR', 0)
+          };
+        } else if (p.role === 'PLAYER') {
+          const num = counter++;
+          return {
+            ...p,
+            number: num,
+            targetNick: computeTargetNickname(clean, 'PLAYER', num)
+          };
+        }
+        return {
+          ...p,
+          number: null,
+          targetNick: computeTargetNickname(clean, 'SPECTATOR', null)
+        };
+      })
+    );
+    setHasUnsavedChanges(true);
+    setBannerMessage({
+      type: 'info',
+      text: 'Numéros 01, 02... attribués ! Cliquez sur "Sauvegarder" ci-dessous pour valider.'
+    });
+  };
+
+  const handleRandomizeNumbers = () => {
+    setLocalParticipants((prev) => {
+      const playerIndices = prev
+        .map((p, idx) => (p.role === 'PLAYER' ? idx : -1))
+        .filter((idx) => idx !== -1);
+      const shuffledNums = Array.from({ length: playerIndices.length }, (_, i) => i + 1);
+      for (let i = shuffledNums.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledNums[i], shuffledNums[j]] = [shuffledNums[j], shuffledNums[i]];
+      }
+
+      const next = [...prev];
+      playerIndices.forEach((idx, i) => {
+        const p = next[idx];
+        const num = shuffledNums[i];
+        const clean = cleanOldName(p.originalNick || p.displayName);
+        next[idx] = {
+          ...p,
+          number: num,
+          targetNick: computeTargetNickname(clean, 'PLAYER', num)
+        };
       });
-    } catch (err: any) {
-      setBannerMessage({ type: 'error', text: err.response?.data?.error || err.message });
-    } finally {
-      setActionLoading(false);
-    }
+      return next;
+    });
+    setHasUnsavedChanges(true);
   };
 
-  const handleRandomizeNumbers = async () => {
+  const handleDiscardChanges = () => {
+    setLocalParticipants(session?.participants || []);
+    setHasUnsavedChanges(false);
+    setBannerMessage({ type: 'info', text: 'Modifications annulées.' });
+  };
+
+  const handleSaveOnly = async () => {
     setActionLoading(true);
     try {
-      const res = await api.post(`/guilds/${selectedGuild.id}/live-partie/randomize-numbers`);
+      const res = await api.post(`/guilds/${selectedGuild.id}/live-partie/save-participants`, {
+        participants: localParticipants.map((p) => ({
+          id: p.id,
+          role: p.role,
+          number: p.number
+        }))
+      });
       setSession(res.data);
-      setBannerMessage({ type: 'success', text: 'Ordre et numéros des joueurs mélangés aléatoirement !' });
+      setLocalParticipants(res.data.participants || []);
+      setHasUnsavedChanges(false);
+      setBannerMessage({ type: 'success', text: '💾 Modifications enregistrées avec succès !' });
     } catch (err: any) {
       setBannerMessage({ type: 'error', text: err.response?.data?.error || err.message });
     } finally {
@@ -212,23 +360,35 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
     }
   };
 
-  const handleApplyRenames = async () => {
-    if (!session || session.participants.length === 0) return;
-    const confirmText = "Voulez-vous renommer tous les joueurs sur Discord selon leurs numéros attribués ?";
+  const handleSaveAndApply = async () => {
+    if (!localParticipants || localParticipants.length === 0) return;
+    const confirmText = "Enregistrer les modifications et renommer tous les participants sur Discord ?";
     if (!window.confirm(confirmText)) return;
 
     setActionLoading(true);
     setBannerMessage({
       type: 'info',
-      text: 'Renommage sur Discord en cours... Veuillez patienter quelques secondes.'
+      text: 'Sauvegarde et renommage sur Discord en cours (respect des limites API Discord)...'
     });
 
     try {
+      // 1. Save participant numbers & roles
+      await api.post(`/guilds/${selectedGuild.id}/live-partie/save-participants`, {
+        participants: localParticipants.map((p) => ({
+          id: p.id,
+          role: p.role,
+          number: p.number
+        }))
+      });
+      setHasUnsavedChanges(false);
+
+      // 2. Apply batch renames on Discord
       const res = await api.post(`/guilds/${selectedGuild.id}/live-partie/apply-renames`);
       setSession(res.data.session);
+      setLocalParticipants(res.data.session.participants || []);
       setBannerMessage({
         type: 'success',
-        text: '🪄 Renommage terminé sur Discord ! Les pseudos sont à jour.'
+        text: '🪄 Modifications sauvegardées et renommage terminé sur Discord !'
       });
     } catch (err: any) {
       setBannerMessage({ type: 'error', text: err.response?.data?.error || err.message });
@@ -249,6 +409,8 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
     try {
       const res = await api.post(`/guilds/${selectedGuild.id}/live-partie/reset-renames`);
       setSession(res.data.session);
+      setLocalParticipants(res.data.session.participants || []);
+      setHasUnsavedChanges(false);
       setBannerMessage({
         type: 'success',
         text: '↩️ Pseudos originaux restaurés sur Discord !'
@@ -266,16 +428,15 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const participants = session?.participants || [];
-  const narrators = participants.filter((p) => p.role === 'NARRATOR');
-  const players = participants.filter((p) => p.role === 'PLAYER');
-  const spectators = participants.filter((p) => p.role === 'SPECTATOR');
+  const narrators = localParticipants.filter((p) => p.role === 'NARRATOR');
+  const players = localParticipants.filter((p) => p.role === 'PLAYER');
+  const spectators = localParticipants.filter((p) => p.role === 'SPECTATOR');
 
-  const inVoiceCount = participants.filter((p) => p.isInVoice).length;
-  const afterJoinersCount = participants.filter((p) => p.isAfterJoiner).length;
+  const inVoiceCount = localParticipants.filter((p) => p.isInVoice).length;
+  const afterJoinersCount = localParticipants.filter((p) => p.isAfterJoiner).length;
 
   return (
-    <div className="live-partie-container" style={{ animation: 'fadeIn 0.3s ease', maxWidth: '1400px', margin: '0 auto', paddingBottom: '3rem' }}>
+    <div className="live-partie-container" style={{ animation: 'fadeIn 0.3s ease', maxWidth: '1400px', margin: '0 auto', paddingBottom: '5rem' }}>
       {/* 1. Sleek Compact Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -421,7 +582,7 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
             type="button"
             className="btn btn-secondary"
             onClick={handleResetRenames}
-            disabled={actionLoading || participants.length === 0}
+            disabled={actionLoading || localParticipants.length === 0}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', padding: '0.45rem 0.75rem' }}
             title="Restaurer les pseudos normaux sur Discord"
           >
@@ -452,8 +613,8 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
           <button
             type="button"
             className="btn btn-gold"
-            onClick={handleApplyRenames}
-            disabled={actionLoading || participants.length === 0}
+            onClick={handleSaveAndApply}
+            disabled={actionLoading || localParticipants.length === 0}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -475,7 +636,7 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
       {session?.isRenamingInProgress && session.renameProgress && (
         <div style={{ marginBottom: '1.25rem', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', padding: '0.6rem 1rem', border: '1px solid rgba(212, 175, 55, 0.3)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--gold)', marginBottom: '0.3rem' }}>
-            <span>Renommage Discord en cours...</span>
+            <span>Renommage Discord en cours (respect des limites Discord)...</span>
             <span>{session.renameProgress.current} / {session.renameProgress.total}</span>
           </div>
           <div style={{ height: '5px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
@@ -632,12 +793,69 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
           )}
         </div>
       )}
+
+      {/* 5. Floating Save Pop-Up Bar (Appears whenever user modifies any number, role, or order) */}
+      {hasUnsavedChanges && (
+        <div className="live-unsaved-bar">
+          <div className="live-unsaved-info">
+            <span className="live-unsaved-dot" />
+            <span>Modifications en attente</span>
+          </div>
+          <div className="live-unsaved-actions">
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleDiscardChanges}
+              disabled={actionLoading}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', padding: '0.4rem 0.8rem' }}
+            >
+              <RotateCcw size={13} />
+              <span>Annuler</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleSaveOnly}
+              disabled={actionLoading}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontSize: '0.82rem',
+                padding: '0.4rem 0.85rem',
+                borderColor: 'var(--gold)',
+                color: 'var(--gold)'
+              }}
+            >
+              <Check size={14} />
+              <span>Sauvegarder</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-gold btn-sm"
+              onClick={handleSaveAndApply}
+              disabled={actionLoading}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                padding: '0.4rem 1rem'
+              }}
+            >
+              <Sparkles size={14} />
+              <span>Sauvegarder & Renommer Discord</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 // -------------------------------------------------------------
-// Participant Card Component (Mobile & Desktop Responsive)
+// Participant Card Component (Connected Protection & Offline Display)
 // -------------------------------------------------------------
 interface ParticipantCardProps {
   participant: LiveParticipant;
@@ -658,13 +876,11 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
 }) => {
   const isNarrator = p.role === 'NARRATOR';
   const isPlayer = p.role === 'PLAYER';
-
-  const numberDisplay =
-    isNarrator ? '0000' : p.number !== null && p.number > 0 ? String(p.number).padStart(2, '0') : '--';
+  const isConnected = p.isInVoice;
 
   return (
     <div
-      className={`live-participant-card ${isNarrator ? 'narrator' : isPlayer ? 'player' : 'spectator'}`}
+      className={`live-participant-card ${!isConnected ? 'offline' : ''} ${isNarrator ? 'narrator' : isPlayer ? 'player' : 'spectator'}`}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -676,21 +892,29 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
           : 'rgba(20, 20, 26, 0.75)',
         border: isNarrator
           ? '1px solid rgba(212, 175, 55, 0.45)'
-          : '1px solid var(--border-dark)',
+          : isConnected
+          ? '1px solid var(--border-dark)'
+          : '1px dashed rgba(255, 255, 255, 0.15)',
         boxShadow: '0 4px 18px rgba(0, 0, 0, 0.3)',
         transition: 'all 0.2s ease',
         position: 'relative'
       }}
     >
-      {/* Top row: Avatar & Names */}
+      {/* Top row: Avatar, Names, Number, Delete */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        {/* Avatar with Voice indicators */}
+        {/* Avatar with Voice Indicator */}
         <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
           {p.avatar ? (
             <img
               src={p.avatar}
               alt={p.displayName}
-              style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                opacity: isConnected ? 1 : 0.6
+              }}
             />
           ) : (
             <div
@@ -704,36 +928,49 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
                 justifyContent: 'center',
                 fontSize: '0.9rem',
                 color: 'var(--text-cream)',
-                border: '1px solid var(--border-dark)'
+                border: '1px solid var(--border-dark)',
+                opacity: isConnected ? 1 : 0.6
               }}
             >
               {p.displayName.substring(0, 2).toUpperCase()}
             </div>
           )}
+
+          {/* Voice Dot */}
           <span
-            className={`live-voice-dot ${p.isInVoice ? 'online' : 'waiting'}`}
-            title={p.isInVoice ? 'En vocal' : 'En attente'}
+            className={`live-voice-dot ${isConnected ? 'online' : p.isAfterJoiner ? 'waiting' : 'offline'}`}
+            title={
+              isConnected
+                ? p.isMute
+                  ? 'Connecté en vocal (Muet)'
+                  : 'Connecté en vocal'
+                : p.isAfterJoiner
+                ? 'En attente de connexion vocale'
+                : 'Déconnecté du salon vocal'
+            }
             style={{ width: '14px', height: '14px' }}
           >
-            {p.isInVoice ? (
+            {isConnected ? (
               p.isMute ? (
                 <MicOff size={8} color="#f87171" />
               ) : (
                 <Mic size={8} color="#4ade80" />
               )
-            ) : (
+            ) : p.isAfterJoiner ? (
               <Clock size={8} color="#c084fc" />
+            ) : (
+              <span style={{ fontSize: '7px', color: '#a1a1aa' }}>●</span>
             )}
           </span>
         </div>
 
-        {/* Names */}
+        {/* Names & Status */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
           <div
             style={{
               fontWeight: 600,
               fontSize: '0.85rem',
-              color: 'var(--text-cream)',
+              color: isConnected ? 'var(--text-cream)' : '#a1a1aa',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis'
@@ -762,19 +999,26 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
             >
               {isCopied ? <Check size={10} color="#4ade80" /> : <Copy size={10} />}
             </button>
-            {p.renameStatus === 'SUCCESS' && <span title="Renommé"><CheckCircle2 size={10} color="#4ade80" /></span>}
-            {p.renameStatus === 'SKIPPED_HIERARCHY' && <span title="Rôle supérieur"><AlertTriangle size={10} color="#fbbf24" /></span>}
-            {p.renameStatus === 'ERROR' && <span title="Erreur"><AlertTriangle size={10} color="#f87171" /></span>}
+            {p.renameStatus === 'SUCCESS' && <span title="Renommé sur Discord"><CheckCircle2 size={10} color="#4ade80" /></span>}
+            {p.renameStatus === 'SKIPPED_HIERARCHY' && <span title="Rôle Discord supérieur au bot"><AlertTriangle size={10} color="#fbbf24" /></span>}
+            {p.renameStatus === 'ERROR' && <span title="Erreur de renommage"><AlertTriangle size={10} color="#f87171" /></span>}
+            {!isConnected && !p.isAfterJoiner && (
+              <span style={{ color: '#a1a1aa', fontSize: '0.66rem', fontStyle: 'italic', marginLeft: '2px' }}>
+                (Hors vocal)
+              </span>
+            )}
           </div>
         </div>
-        
-        {/* Number Display & Delete (Top Right) */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'flex-end', 
-          gap: '0.2rem' 
-        }}>
+
+        {/* Number Badge & Delete Button (Only when offline!) */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: '0.2rem'
+          }}
+        >
           {isPlayer ? (
             <input
               type="number"
@@ -795,7 +1039,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
                 background: 'rgba(96, 165, 250, 0.1)',
                 margin: 0
               }}
-              title="Numéro du Joueur"
+              title="Numéro du Joueur (Cliquez pour éditer)"
             />
           ) : isNarrator ? (
             <div className="live-number-badge gold" style={{ width: '36px', height: '24px', fontSize: '0.75rem', borderRadius: '4px' }}>
@@ -806,15 +1050,19 @@ const ParticipantCard: React.FC<ParticipantCardProps> = ({
               --
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => onRemove(p.id)}
-            className="live-delete-btn"
-            style={{ padding: '2px' }}
-            title="Retirer"
-          >
-            <Trash2 size={12} />
-          </button>
+
+          {/* Delete button: ONLY available if player is NOT in voice channel! */}
+          {!isConnected && (
+            <button
+              type="button"
+              onClick={() => onRemove(p.id)}
+              className="live-delete-btn"
+              style={{ padding: '2px' }}
+              title="Retirer de la liste (Joueur déconnecté)"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
         </div>
       </div>
 
