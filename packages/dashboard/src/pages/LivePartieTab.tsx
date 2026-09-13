@@ -60,6 +60,7 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
   const [actionLoading, setActionLoading] = useState(false);
   const [afterJoinerId, setAfterJoinerId] = useState('');
   const [afterJoinerRole, setAfterJoinerRole] = useState<'PLAYER' | 'NARRATOR'>('PLAYER');
+  const [showAddJoiner, setShowAddJoiner] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [bannerMessage, setBannerMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
@@ -274,33 +275,36 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
   const afterJoinersCount = participants.filter((p) => p.isAfterJoiner).length;
 
   return (
-    <div className="live-partie-container" style={{ animation: 'fadeIn 0.3s ease', paddingBottom: '7rem' }}>
-      {/* 1. Header Banner */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-            <Radio size={24} color="var(--gold)" className="live-pulse-icon" />
-            <h1 style={{ margin: 0, fontSize: '1.8rem' }}>Live Partie & Gestion des Joueurs</h1>
-          </div>
-          <p style={{ color: 'var(--text-light-muted)', fontSize: '0.92rem', margin: 0 }}>
-            Détection vocale en direct sur <strong>{selectedGuild.name}</strong>.
-          </p>
+    <div className="live-partie-container" style={{ animation: 'fadeIn 0.3s ease', maxWidth: '1400px', margin: '0 auto', paddingBottom: '3rem' }}>
+      {/* 1. Sleek Compact Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <h1 style={{ margin: 0, fontSize: '1.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Radio size={22} color="var(--gold)" />
+            <span>Live Partie</span>
+          </h1>
+          <span className={`live-status-pill ${session?.voiceChannelId ? 'active' : ''}`}>
+            <span className="live-pulse-dot" />
+            {session?.voiceChannelId ? 'EN DIRECT' : 'EN ATTENTE'}
+          </span>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}
-          onClick={() => fetchSession(true)}
-          disabled={loading || actionLoading}
-          title="Rafraîchir les données de la partie"
-        >
-          <RefreshCw size={15} className={loading ? 'spin-anim' : ''} />
-          <span>Rafraîchir</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+            onClick={() => fetchSession(true)}
+            disabled={loading || actionLoading}
+            title="Rafraîchir les données"
+          >
+            <RefreshCw size={14} className={loading ? 'spin-anim' : ''} />
+            <span>Rafraîchir</span>
+          </button>
+        </div>
       </div>
 
-      {/* Banner Feedback Messages */}
+      {/* Floating Toast / Banner Message */}
       {bannerMessage && (
         <div
           className={`live-banner-alert ${bannerMessage.type}`}
@@ -308,22 +312,22 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0.85rem 1.25rem',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: '1.5rem',
-            fontSize: '0.9rem',
+            padding: '0.5rem 1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            fontSize: '0.85rem',
             background:
               bannerMessage.type === 'success'
-                ? 'rgba(34, 197, 94, 0.15)'
+                ? 'rgba(34, 197, 94, 0.12)'
                 : bannerMessage.type === 'error'
-                ? 'rgba(239, 68, 68, 0.15)'
-                : 'rgba(212, 175, 55, 0.15)',
+                ? 'rgba(239, 68, 68, 0.12)'
+                : 'rgba(212, 175, 55, 0.12)',
             border:
               bannerMessage.type === 'success'
-                ? '1px solid rgba(34, 197, 94, 0.4)'
+                ? '1px solid rgba(34, 197, 94, 0.3)'
                 : bannerMessage.type === 'error'
-                ? '1px solid rgba(239, 68, 68, 0.4)'
-                : '1px solid rgba(212, 175, 55, 0.4)',
+                ? '1px solid rgba(239, 68, 68, 0.3)'
+                : '1px solid rgba(212, 175, 55, 0.3)',
             color:
               bannerMessage.type === 'success'
                 ? '#4ade80'
@@ -336,35 +340,21 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
           <button
             type="button"
             onClick={() => setBannerMessage(null)}
-            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', opacity: 0.7 }}
+            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: '0 4px', opacity: 0.7 }}
           >
             ✕
           </button>
         </div>
       )}
 
-      {/* 2. Top Control Panel: Voice Channel Selector & Game Actions */}
-      <div
-        className="glass-panel"
-        style={{
-          marginBottom: '1.75rem',
-          border: '1px solid rgba(212, 175, 55, 0.35)',
-          background: 'radial-gradient(ellipse at top, rgba(212, 175, 55, 0.08) 0%, rgba(20, 16, 14, 0.85) 60%)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-          padding: '1.25rem 1.5rem'
-        }}
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', alignItems: 'center' }}>
-          
-          {/* Voice Channel Selection */}
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-cream)', marginBottom: '0.5rem' }}>
-              <Volume2 size={16} color="var(--gold)" />
-              Salon Vocal de la Partie :
-            </label>
+      {/* 2. Unified Cockpit Bar (Single Row Control Strip) */}
+      <div className="live-cockpit-bar">
+        <div className="live-cockpit-left">
+          {/* Voice Channel Picker */}
+          <div className="live-voice-select-wrap">
+            <Volume2 size={16} color="var(--gold)" />
             <select
-              className="form-control"
-              style={{ background: 'var(--bg-dark-surface)', fontSize: '0.9rem' }}
+              className="live-voice-select"
               value={session?.voiceChannelId || ''}
               onChange={(e) => handleSelectVoiceChannel(e.target.value)}
               disabled={actionLoading}
@@ -378,279 +368,270 @@ export const LivePartieTab: React.FC<LivePartieTabProps> = ({ selectedGuild, cha
             </select>
           </div>
 
-          {/* Quick Metrics */}
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div className="live-stat-pill">
-              <span className="live-stat-dot active" />
-              <span>{inVoiceCount} en vocal</span>
-            </div>
-            <div className="live-stat-pill gold">
-              <Crown size={14} color="var(--gold)" />
-              <span>{narrators.length} MJ</span>
-            </div>
-            <div className="live-stat-pill blue">
-              <Swords size={14} color="#60a5fa" />
-              <span>{players.length} Joueurs</span>
-            </div>
+          {/* Live Counters */}
+          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="live-stat-pill" title="Membres connectés en vocal">
+              <span className={`live-stat-dot ${inVoiceCount > 0 ? 'active' : ''}`} />
+              {inVoiceCount} vocal
+            </span>
+            <span className="live-stat-pill gold" title="Maîtres du Jeu">
+              <Crown size={12} color="var(--gold)" />
+              {narrators.length} MJ
+            </span>
+            <span className="live-stat-pill blue" title="Joueurs avec numéros">
+              <Swords size={12} color="#60a5fa" />
+              {players.length} Joueurs
+            </span>
             {afterJoinersCount > 0 && (
-              <div className="live-stat-pill purple">
-                <Clock size={14} color="#c084fc" />
-                <span>{afterJoinersCount} En attente</span>
-              </div>
+              <span className="live-stat-pill purple" title="Joueurs pré-inscrits en attente">
+                <Clock size={12} color="#c084fc" />
+                {afterJoinersCount} en attente
+              </span>
             )}
           </div>
-
-          {/* Action Buttons Toolbar */}
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleAutoNumber}
-              disabled={actionLoading || players.length === 0}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.55rem 0.9rem' }}
-              title="Attribue les numéros 01, 02... et 0000 aux narrateurs"
-            >
-              <Sparkles size={15} color="var(--gold)" />
-              <span>Auto-Numéroter</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleRandomizeNumbers}
-              disabled={actionLoading || players.length <= 1}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.55rem 0.9rem' }}
-              title="Mélanger l'ordre aléatoirement"
-            >
-              <Shuffle size={15} />
-              <span>Mélanger</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleResetRenames}
-              disabled={actionLoading || participants.length === 0}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.55rem 0.9rem' }}
-              title="Restaurer les pseudos normaux sans numéros"
-            >
-              <RotateCcw size={15} />
-              <span>Restaurer Noms</span>
-            </button>
-          </div>
-
         </div>
 
-        {/* Progress Bar when renaming */}
-        {session?.isRenamingInProgress && session.renameProgress && (
-          <div style={{ marginTop: '1rem', background: 'rgba(0,0,0,0.4)', borderRadius: '8px', padding: '0.75rem 1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--gold)', marginBottom: '0.4rem' }}>
-              <span>Renommage Discord en cours...</span>
-              <span>{session.renameProgress.current} / {session.renameProgress.total}</span>
-            </div>
-            <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-              <div
-                style={{
-                  height: '100%',
-                  background: 'var(--gold)',
-                  width: `${(session.renameProgress.current / Math.max(session.renameProgress.total, 1)) * 100}%`,
-                  transition: 'width 0.2s ease'
-                }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 3. After-Joiners Form: Pre-add players by ID */}
-      <div
-        className="glass-panel"
-        style={{
-          marginBottom: '1.75rem',
-          padding: '1rem 1.25rem',
-          background: 'rgba(15, 12, 20, 0.65)',
-          border: '1px dashed rgba(192, 132, 252, 0.4)'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <UserPlus size={18} color="#c084fc" />
-          <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-cream)' }}>
-            Pré-inscrire un joueur en retard (After-Joiner)
-          </h3>
-          <span style={{ fontSize: '0.75rem', color: '#c084fc', background: 'rgba(192, 132, 252, 0.15)', padding: '2px 8px', borderRadius: '10px' }}>
-            Optionnel
-          </span>
-        </div>
-        <p style={{ margin: '0 0 0.85rem 0', fontSize: '0.83rem', color: 'var(--text-light-muted)' }}>
-          Entrez l'ID Discord du joueur. Le bot lui réservera sa place dès son arrivée.
-        </p>
-
-        <form onSubmit={handleAddAfterJoiner} style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Identifiant Discord (ex: 289123456789012345)"
-            value={afterJoinerId}
-            onChange={(e) => setAfterJoinerId(e.target.value)}
-            style={{ flex: '1 1 240px', fontSize: '0.85rem' }}
-          />
-
-          <select
-            className="form-control"
-            style={{ width: '140px', fontSize: '0.85rem' }}
-            value={afterJoinerRole}
-            onChange={(e) => setAfterJoinerRole(e.target.value as any)}
+        {/* Action Buttons Toolbar */}
+        <div className="live-cockpit-actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleAutoNumber}
+            disabled={actionLoading || players.length === 0}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', padding: '0.45rem 0.75rem' }}
+            title="Attribuer automatiquement 01, 02... et 0000 aux narrateurs"
           >
-            <option value="PLAYER">⚔️ Joueur</option>
-            <option value="NARRATOR">🎭 Narrateur</option>
-          </select>
+            <Sparkles size={14} color="var(--gold)" />
+            <span>Auto 01..</span>
+          </button>
 
           <button
-            type="submit"
-            className="btn btn-gold"
-            disabled={actionLoading || !afterJoinerId.trim()}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.55rem 1.1rem' }}
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleRandomizeNumbers}
+            disabled={actionLoading || players.length <= 1}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', padding: '0.45rem 0.75rem' }}
+            title="Mélanger aléatoirement les numéros des joueurs"
           >
-            <UserPlus size={15} />
-            <span>Réserver sa place</span>
+            <Shuffle size={14} />
+            <span>Mélanger</span>
           </button>
-        </form>
-      </div>
 
-      {/* 4. Categorized Participant Lists */}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleResetRenames}
+            disabled={actionLoading || participants.length === 0}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', padding: '0.45rem 0.75rem' }}
+            title="Restaurer les pseudos normaux sur Discord"
+          >
+            <RotateCcw size={14} />
+            <span>Reset</span>
+          </button>
 
-      {/* A. NARRATEURS (0000) */}
-      <div style={{ marginBottom: '1.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
-          <Crown size={18} color="var(--gold)" />
-          <h2 className="fantasy-font" style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-cream)' }}>
-            Narrateur(s) du Jeu (MJ)
-          </h2>
-          <span style={{ fontSize: '0.75rem', background: 'rgba(212, 175, 55, 0.2)', color: 'var(--gold)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
-            Préfixe : 0000
-          </span>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowAddJoiner(!showAddJoiner)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              fontSize: '0.82rem',
+              padding: '0.45rem 0.75rem',
+              borderColor: showAddJoiner ? '#c084fc' : undefined,
+              color: showAddJoiner ? '#c084fc' : undefined
+            }}
+            title="Pré-inscrire un joueur par son ID Discord s'il n'est pas encore en vocal"
+          >
+            <UserPlus size={14} />
+            <span>+ ID</span>
+          </button>
+
+          {/* Primary Action Button */}
+          <button
+            type="button"
+            className="btn btn-gold"
+            onClick={handleApplyRenames}
+            disabled={actionLoading || participants.length === 0}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              padding: '0.45rem 1rem',
+              boxShadow: '0 2px 14px rgba(212, 175, 55, 0.4)'
+            }}
+            title="Renommer tous les joueurs sur Discord selon leurs numéros"
+          >
+            <Sparkles size={15} />
+            <span>Renommer Discord</span>
+          </button>
         </div>
-
-        {narrators.length === 0 ? (
-          <div className="live-empty-state">
-            Aucun narrateur désigné. Vous pouvez promouvoir un joueur en MJ ci-dessous.
-          </div>
-        ) : (
-          <div className="live-participants-grid">
-            {narrators.map((p) => (
-              <ParticipantCard
-                key={p.id}
-                participant={p}
-                onUpdateRole={handleUpdateParticipantRole}
-                onUpdateNumber={handleUpdateParticipantNumber}
-                onRemove={handleRemoveParticipant}
-                onCopy={copyToClipboard}
-                isCopied={copiedId === p.id}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* B. JOUEURS (01, 02, 03...) */}
-      <div style={{ marginBottom: '1.75rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
-          <Swords size={18} color="#60a5fa" />
-          <h2 className="fantasy-font" style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-cream)' }}>
-            Joueurs Actifs ({players.length})
-          </h2>
-          <span style={{ fontSize: '0.75rem', background: 'rgba(96, 165, 250, 0.2)', color: '#93c5fd', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
-            Numéros : 01, 02, 03...
-          </span>
-        </div>
-
-        {players.length === 0 ? (
-          <div className="live-empty-state">
-            {session?.voiceChannelId
-              ? "Aucun joueur connecté dans ce salon vocal. Demandez aux joueurs de rejoindre le salon ou pré-inscrivez-les avec l'ID ci-dessus !"
-              : "Veuillez sélectionner un salon vocal en haut pour détecter les joueurs."}
+      {/* Renaming Progress Bar (if in progress) */}
+      {session?.isRenamingInProgress && session.renameProgress && (
+        <div style={{ marginBottom: '1.25rem', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', padding: '0.6rem 1rem', border: '1px solid rgba(212, 175, 55, 0.3)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--gold)', marginBottom: '0.3rem' }}>
+            <span>Renommage Discord en cours...</span>
+            <span>{session.renameProgress.current} / {session.renameProgress.total}</span>
           </div>
-        ) : (
-          <div className="live-participants-grid">
-            {players.map((p) => (
-              <ParticipantCard
-                key={p.id}
-                participant={p}
-                onUpdateRole={handleUpdateParticipantRole}
-                onUpdateNumber={handleUpdateParticipantNumber}
-                onRemove={handleRemoveParticipant}
-                onCopy={copyToClipboard}
-                isCopied={copiedId === p.id}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* C. SPECTATEURS */}
-      {spectators.length > 0 && (
-        <div style={{ marginBottom: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
-            <Eye size={18} color="var(--text-muted)" />
-            <h2 className="fantasy-font" style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-muted)' }}>
-              Spectateurs ({spectators.length})
-            </h2>
-          </div>
-
-          <div className="live-participants-grid">
-            {spectators.map((p) => (
-              <ParticipantCard
-                key={p.id}
-                participant={p}
-                onUpdateRole={handleUpdateParticipantRole}
-                onUpdateNumber={handleUpdateParticipantNumber}
-                onRemove={handleRemoveParticipant}
-                onCopy={copyToClipboard}
-                isCopied={copiedId === p.id}
-              />
-            ))}
+          <div style={{ height: '5px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                background: 'var(--gold)',
+                width: `${(session.renameProgress.current / Math.max(session.renameProgress.total, 1)) * 100}%`,
+                transition: 'width 0.2s ease'
+              }}
+            />
           </div>
         </div>
       )}
 
-      {/* 5. Sticky Bottom Action Bar for Mobile & Desktop */}
-      <div className="live-sticky-action-bar">
-        <div className="live-sticky-content">
-          <div className="live-sticky-info">
-            <span style={{ fontWeight: 600, color: 'var(--text-cream)' }}>
-              Partie prête :
-            </span>
-            <span style={{ color: 'var(--gold)', fontWeight: 700 }}>
-              {players.length} Joueur{players.length > 1 ? 's' : ''}
-            </span>
-            <span style={{ color: 'var(--text-light-muted)' }}>•</span>
-            <span style={{ color: '#c084fc' }}>
-              {narrators.length} MJ
-            </span>
+      {/* 3. Inline Quick-Add Joiner Strip */}
+      {showAddJoiner && (
+        <form onSubmit={handleAddAfterJoiner} className="live-add-joiner-strip">
+          <div className="live-add-input-wrap">
+            <UserPlus size={15} color="#c084fc" />
+            <input
+              type="text"
+              className="live-add-input"
+              placeholder="Identifiant Discord (User ID, ex: 289123456789012345)"
+              value={afterJoinerId}
+              onChange={(e) => setAfterJoinerId(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <select
+            className="live-add-select"
+            value={afterJoinerRole}
+            onChange={(e) => setAfterJoinerRole(e.target.value as any)}
+          >
+            <option value="PLAYER">⚔️ Joueur</option>
+            <option value="NARRATOR">🎭 Narrateur (0000)</option>
+          </select>
+          <button
+            type="submit"
+            className="btn btn-gold"
+            disabled={actionLoading || !afterJoinerId.trim()}
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.85rem' }}
+          >
+            Réserver
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddJoiner(false)}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+          >
+            ✕
+          </button>
+        </form>
+      )}
+
+      {/* 4. Main Participants Content */}
+      {!session?.voiceChannelId ? (
+        <div className="live-empty-state-card">
+          <Volume2 size={40} color="var(--gold)" style={{ opacity: 0.8 }} />
+          <h3 style={{ margin: 0, color: 'var(--text-cream)' }}>Aucun salon vocal sélectionné</h3>
+          <p style={{ margin: 0, fontSize: '0.88rem', maxWidth: '400px' }}>
+            Sélectionnez un salon vocal dans la barre ci-dessus pour détecter et gérer les joueurs en direct.
+          </p>
+        </div>
+      ) : (
+        <div>
+          {/* NARRATOR VIP ROW (Only if narrators exist) */}
+          {narrators.length > 0 && (
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
+                <Crown size={16} color="var(--gold)" />
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--gold)', letterSpacing: '0.04em' }}>
+                  MAÎTRE DU JEU (MJ • 0000)
+                </span>
+              </div>
+              <div className="live-participants-grid">
+                {narrators.map((p) => (
+                  <ParticipantCard
+                    key={p.id}
+                    participant={p}
+                    onUpdateRole={handleUpdateParticipantRole}
+                    onUpdateNumber={handleUpdateParticipantNumber}
+                    onRemove={handleRemoveParticipant}
+                    onCopy={copyToClipboard}
+                    isCopied={copiedId === p.id}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ACTIVE PLAYERS SECTION */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Swords size={16} color="#60a5fa" />
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#93c5fd', letterSpacing: '0.04em' }}>
+                  JOUEURS ACTIFS ({players.length})
+                </span>
+                {narrators.length === 0 && (
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
+                    (Passez un joueur en 🎭 MJ si besoin)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {players.length === 0 ? (
+              <div className="live-empty-state-card" style={{ padding: '1.5rem' }}>
+                <p style={{ margin: 0, fontSize: '0.85rem' }}>
+                  Aucun joueur dans ce salon vocal. Demandez-leur de se connecter ou ajoutez-les avec "+ ID" !
+                </p>
+              </div>
+            ) : (
+              <div className="live-participants-grid">
+                {players.map((p) => (
+                  <ParticipantCard
+                    key={p.id}
+                    participant={p}
+                    onUpdateRole={handleUpdateParticipantRole}
+                    onUpdateNumber={handleUpdateParticipantNumber}
+                    onRemove={handleRemoveParticipant}
+                    onCopy={copyToClipboard}
+                    isCopied={copiedId === p.id}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <button
-              type="button"
-              className="btn btn-gold"
-              onClick={handleApplyRenames}
-              disabled={actionLoading || participants.length === 0}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.6rem',
-                fontSize: '0.95rem',
-                fontWeight: 700,
-                boxShadow: '0 4px 20px rgba(212, 175, 55, 0.4)'
-              }}
-            >
-              <Sparkles size={18} />
-              <span>🪄 Renommer sur Discord</span>
-            </button>
-          </div>
+          {/* SPECTATORS SECTION (Only if spectators exist) */}
+          {spectators.length > 0 && (
+            <div style={{ marginTop: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
+                <Eye size={15} color="var(--text-muted)" />
+                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  SPECTATEURS ({spectators.length})
+                </span>
+              </div>
+              <div className="live-participants-grid">
+                {spectators.map((p) => (
+                  <ParticipantCard
+                    key={p.id}
+                    participant={p}
+                    onUpdateRole={handleUpdateParticipantRole}
+                    onUpdateNumber={handleUpdateParticipantNumber}
+                    onRemove={handleRemoveParticipant}
+                    onCopy={copyToClipboard}
+                    isCopied={copiedId === p.id}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 };
